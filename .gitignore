@@ -1,0 +1,11 @@
+node_modules/
+logs/
+.env
+.DS_Store
+data/
+private_member_uploads/
+public/uploads/
+*.db
+*.sqlite
+*.log
+
