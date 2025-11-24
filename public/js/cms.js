@@ -135,7 +135,7 @@
     // Language switch
     const dict = {
       zh: {
-        home: '首頁', about: '鼓潮', about_teacher: '音樂教室', about_us: '文化場域', about_fund: '關於基金帳戶',
+        home: '首頁', about: '關於鼓潮', about_teacher: '關於音樂', about_us: '關於藝文場地', about_fund: '關於基金帳戶',
         blog: '部落格', news: '最新消息', leaderboard: '師資說明', plans: '課程方案', contact: '聯絡我們', trial: '課程試讀', login: '登入'
       },
       en: {

@@ -1231,12 +1231,12 @@
     document.getElementById('mfg-bg-file')?.addEventListener('change', (e) => e.target.files[0] && uploadBg(e.target.files[0], 'mfg-bg'));
 
     document.getElementById('aboutus-save')?.addEventListener('click', async () => {
-      await api('POST', '/api/admin/pages', { slug: 'about-us', title: '文化場域', content_html: document.getElementById('aboutus-editor').innerHTML, background_image_id: document.getElementById('aboutus-bg').value || null, is_published: 1 });
-      alert('已儲存：文化場域');
+      await api('POST', '/api/admin/pages', { slug: 'about-us', title: '關於藝文場地', content_html: document.getElementById('aboutus-editor').innerHTML, background_image_id: document.getElementById('aboutus-bg').value || null, is_published: 1 });
+      alert('已儲存：關於藝文場地');
     });
     document.getElementById('coop-save')?.addEventListener('click', async () => {
-      await api('POST', '/api/admin/pages', { slug: 'about-coop', title: '音樂教室', content_html: document.getElementById('coop-editor').innerHTML, background_image_id: document.getElementById('coop-bg').value || null, is_published: 1 });
-      alert('已儲存：音樂教室');
+      await api('POST', '/api/admin/pages', { slug: 'about-coop', title: '關於音樂', content_html: document.getElementById('coop-editor').innerHTML, background_image_id: document.getElementById('coop-bg').value || null, is_published: 1 });
+      alert('已儲存：關於音樂');
     });
     document.getElementById('mfg-save')?.addEventListener('click', async () => {
       await api('POST', '/api/admin/pages', { slug: 'about-manufacturing', title: '關於三星製造', content_html: document.getElementById('mfg-editor').innerHTML, background_image_id: document.getElementById('mfg-bg').value || null, is_published: 1 });
