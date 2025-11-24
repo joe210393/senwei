@@ -10,10 +10,9 @@ const __dirname = path.dirname(__filename);
 const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/com1.db');
 const schemaPath = path.join(__dirname, '../../db/schema.sqlite.sql');
 
-// Enhanced Seeding Logic: Check for .seeded marker or try to seed if DB seems empty
-const seedMarkerPath = path.join(path.dirname(dbPath), '.seeded_v1');
-
-if (!fs.existsSync(seedMarkerPath)) {
+// Standard Seeding Logic: Only seed if DB file is missing
+// We removed the forced overwrite logic to avoid data loss on subsequent restarts
+if (!fs.existsSync(dbPath)) {
     const seedPath = path.join(__dirname, '../../seed/com1.db');
     if (fs.existsSync(seedPath)) {
         console.log(`Found seed database at ${seedPath}, attempting to restore...`);
@@ -21,17 +20,12 @@ if (!fs.existsSync(seedMarkerPath)) {
             const dbDir = path.dirname(dbPath);
             if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
             
-            // FORCE overwrite if we haven't seeded yet, to ensure we get the user's local data
-            // This might overwrite a fresh empty DB created by Zeabur's previous failed run
             fs.copyFileSync(seedPath, dbPath);
-            fs.writeFileSync(seedMarkerPath, 'seeded');
             console.log('Database seeded successfully from local backup.');
         } catch (e) {
             console.error('Failed to seed database:', e);
         }
     }
-} else {
-    console.log('Database already seeded (marker found).');
 }
 
 // Check for seed uploads
