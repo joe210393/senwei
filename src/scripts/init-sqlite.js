@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/site.db');
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/com1.db');
 const schemaPath = path.join(__dirname, '../../db/schema.sqlite.sql');
 
 console.log(`Initializing SQLite database at ${dbPath}...`);
@@ -15,7 +15,7 @@ console.log(`Initializing SQLite database at ${dbPath}...`);
 try {
   // NOTE: This script previously deleted the DB.
   // We changed it to NOT delete by default to support safe re-runs on fresh deployments.
-  // To force a clean slate, manually delete site.db or run the clean-db script.
+  // To force a clean slate, manually delete com1.db or run the clean-db script.
   const db = new Database(dbPath);
   
   // Check if 'users' table exists to determine if we need to run schema

@@ -6,11 +6,11 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Use environment variable for DB path or default to 'data/site.db' relative to project root
-// If running in container, standard is often /app/data/site.db
+// Use environment variable for DB path or default to 'data/com1.db' relative to project root
+// If running in container, standard is often /app/data/com1.db
 const projectRoot = path.join(__dirname, '../../');
-// Allow overriding via env var, default to project_root/data/site.db
-const dbPath = process.env.DB_PATH || path.join(projectRoot, 'data/site.db');
+// Allow overriding via env var, default to project_root/data/com1.db
+const dbPath = process.env.DB_PATH || path.join(projectRoot, 'data/com1.db');
 
 // Ensure directory exists
 const dbDir = path.dirname(dbPath);

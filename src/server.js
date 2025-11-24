@@ -17,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Check DB status on startup and init if missing
-const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/site.db');
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/com1.db');
 const initScript = path.join(__dirname, 'scripts/init-sqlite.js');
 
 // Run init script synchronously-ish (via fork but waiting) or just import it?
