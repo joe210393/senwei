@@ -139,7 +139,7 @@
         blog: '部落格', news: '最新消息', leaderboard: '師資說明', plans: '課程方案', contact: '聯絡我們', trial: '課程試讀', login: '登入'
       },
       en: {
-        home: 'Home', about: 'Guchau', about_teacher: 'Music Class', about_us: 'Cultural Space', about_fund: 'About Funded Account',
+        home: 'Home', about: 'About Guchau', about_teacher: 'About Music', about_us: 'About Art Space', about_fund: 'About Funded Account',
         blog: 'Blog', news: 'News', leaderboard: 'Instructors', plans: 'Plans', contact: 'Contact', trial: 'Trial', login: 'Login'
       },
       ja: {
