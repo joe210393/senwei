@@ -11,6 +11,13 @@ const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/com1.db')
 const schemaPath = path.join(__dirname, '../../db/schema.sqlite.sql');
 const oldDbPath = path.join(__dirname, '../../data/site.db');
 
+// Support Zeabur persistent path for seed uploads
+let targetUploadsDir = path.join(__dirname, '../../public/uploads');
+if (fs.existsSync('/app/public/uploads')) {
+    targetUploadsDir = '/app/public/uploads';
+    console.log('Using Zeabur persistent uploads path for seeding:', targetUploadsDir);
+}
+
 console.log('--- DB INIT DEBUG START ---');
 console.log('Time:', new Date().toISOString());
 console.log('__dirname:', __dirname);
@@ -60,7 +67,7 @@ if (!fs.existsSync(dbPath)) {
 }
 
 // Check for seed uploads
-const uploadsDir = path.join(__dirname, '../../public/uploads');
+const uploadsDir = targetUploadsDir; // Use resolved target path
 const seedUploadsDir = path.join(__dirname, '../../seed/uploads');
 if (fs.existsSync(seedUploadsDir)) {
     console.log('Seeding uploads...');

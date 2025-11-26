@@ -142,8 +142,35 @@ function startServer() {
     const publicDir = path.join(__dirname, '..', 'public');
     // Detect Zeabur persistent uploads directory
     let uploadsDir = path.join(publicDir, 'uploads');
-    if (fs.existsSync('/app/public/uploads')) {
-        uploadsDir = '/app/public/uploads';
+    const zeaburUploads = '/app/public/uploads';
+    
+    if (fs.existsSync(zeaburUploads)) {
+        console.log('Zeabur persistent uploads directory detected.');
+        // Sync/Migration Logic:
+        // Copy files from local /src/public/uploads to /app/public/uploads if they don't exist there
+        try {
+            if (fs.existsSync(uploadsDir)) {
+                const files = fs.readdirSync(uploadsDir);
+                let copyCount = 0;
+                for (const file of files) {
+                    const src = path.join(uploadsDir, file);
+                    const dest = path.join(zeaburUploads, file);
+                    if (!fs.existsSync(dest)) {
+                        // Only copy files, skip directories for simplicity or use recursive if needed
+                        const stat = fs.statSync(src);
+                        if (stat.isFile()) {
+                            fs.copyFileSync(src, dest);
+                            copyCount++;
+                        }
+                    }
+                }
+                if (copyCount > 0) console.log(`Migrated ${copyCount} files from ephemeral to persistent storage.`);
+            }
+        } catch (e) {
+            console.error('Error migrating uploads:', e);
+        }
+        
+        uploadsDir = zeaburUploads;
         console.log('Using Zeabur persistent uploads directory:', uploadsDir);
     }
 
