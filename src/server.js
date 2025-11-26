@@ -20,6 +20,10 @@ const __dirname = path.dirname(__filename);
 const dbPath = process.env.DB_PATH || path.join(__dirname, '../data/com1.db');
 const initScript = path.join(__dirname, 'scripts/init-sqlite.js');
 
+console.log(`Server Starting...`);
+console.log(`Target DB Path: ${dbPath}`);
+console.log(`DB Exists? ${fs.existsSync(dbPath)}`);
+
 // Run init script synchronously-ish (via fork but waiting) or just import it?
 // Importing it would run it, but it's written as a script. 
 // Let's spawn it.

@@ -9,8 +9,39 @@ const __dirname = path.dirname(__filename);
 
 const dbPath = process.env.DB_PATH || path.join(__dirname, '../../data/com1.db');
 const schemaPath = path.join(__dirname, '../../db/schema.sqlite.sql');
+const oldDbPath = path.join(__dirname, '../../data/site.db');
 
-// Standard Seeding Logic: Only seed if DB file is missing
+console.log('--- DB INIT DEBUG START ---');
+console.log('Time:', new Date().toISOString());
+console.log('__dirname:', __dirname);
+console.log('Target dbPath:', dbPath);
+
+try {
+    const dataDir = path.dirname(dbPath);
+    console.log('Checking Data Directory:', dataDir);
+    if (fs.existsSync(dataDir)) {
+        console.log('Data Directory Exists. Contents:', fs.readdirSync(dataDir));
+    } else {
+        console.log('Data Directory DOES NOT EXIST. It will be created.');
+    }
+} catch (e) {
+    console.error('Error inspecting data directory:', e);
+}
+
+// 1. Recovery/Migration Logic:
+// If com1.db is missing, but we have site.db (old DB), let's use that instead of a fresh seed.
+// This helps preserve data if we switched filenames but still have the old file in the volume.
+if (!fs.existsSync(dbPath) && fs.existsSync(oldDbPath)) {
+    console.log('Found old "site.db" but no "com1.db". Attempting to migrate/copy old data...');
+    try {
+        fs.copyFileSync(oldDbPath, dbPath);
+        console.log('Migration successful: Copied site.db to com1.db');
+    } catch (e) {
+        console.error('Migration failed:', e);
+    }
+}
+
+// 2. Standard Seeding Logic: Only seed if DB file is still missing
 // We removed the forced overwrite logic to avoid data loss on subsequent restarts
 if (!fs.existsSync(dbPath)) {
     const seedPath = path.join(__dirname, '../../seed/com1.db');
