@@ -375,8 +375,8 @@
                 if (!url) return '';
                 try {
                     const u = new URL(url);
-                    // YouTube handling
-                    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+                    // YouTube handling - comply with YouTube API policies
+                    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be') || u.hostname.includes('youtube-nocookie.com')) {
                         let vid = null;
                         // Handle different YouTube URL formats
                         if (u.hostname === 'youtu.be' || u.hostname.includes('youtu.be')) {
@@ -398,15 +398,19 @@
                         // Clean video ID (remove any extra parameters)
                         if (vid) {
                             vid = vid.split('&')[0].split('#')[0].trim();
-                            if (vid) {
-                                return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:8px;margin-bottom:16px;"><iframe src="https://www.youtube.com/embed/${vid}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe></div>`;
+                            if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+                                // Use youtube-nocookie.com for privacy compliance
+                                // Add rel=0 to not show related videos, modestbranding=1 to reduce YouTube branding
+                                // Add enablejsapi=1 for better compatibility
+                                const embedUrl = `https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1&enablejsapi=1`;
+                                return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:8px;margin-bottom:16px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
                             }
                         }
                     }
                     // Facebook handling
                     if (u.hostname.includes('facebook.com')) {
                         const encoded = encodeURIComponent(url);
-                        return `<div class="fb-wrapper" style="margin-bottom:16px;"><iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=500&show_text=true&height=500&appId" width="100%" height="500" style="border:none;overflow:hidden;border-radius:8px;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
+                        return `<div class="fb-wrapper" style="margin-bottom:16px;"><iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=500&show_text=true&height=500&appId" width="100%" height="500" style="border:none;overflow:hidden;border-radius:8px;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" loading="lazy"></iframe></div>`;
                     }
                 } catch (err) {
                     console.error('[Frontend] Error parsing embed URL:', url, err);
@@ -512,7 +516,8 @@
             if (!url) return '';
             try {
                 const u = new URL(url);
-                if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+                // YouTube handling - comply with YouTube API policies
+                if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be') || u.hostname.includes('youtube-nocookie.com')) {
                     let vid = null;
                     if (u.hostname === 'youtu.be' || u.hostname.includes('youtu.be')) {
                         vid = u.pathname.replace(/^\//, '').split('/')[0].split('?')[0];
@@ -527,14 +532,19 @@
                     }
                     if (vid) {
                         vid = vid.split('&')[0].split('#')[0].trim();
-                        if (vid) {
-                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="https://www.youtube.com/embed/${vid}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe></div>`;
+                        // Validate video ID format (YouTube video IDs are 11 characters)
+                        if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+                            // Use youtube-nocookie.com for privacy compliance
+                            // Add rel=0 to not show related videos, modestbranding=1 to reduce YouTube branding
+                            // Add enablejsapi=1 for better compatibility
+                            const embedUrl = `https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1&enablejsapi=1`;
+                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
                         }
                     }
                 }
                 if (u.hostname.includes('facebook.com')) {
                     const encoded = encodeURIComponent(url);
-                    return `<div class="fb-wrapper" style="margin-bottom:24px;"><iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=750&show_text=true&height=600&appId" width="100%" height="600" style="border:none;overflow:hidden;border-radius:12px;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
+                    return `<div class="fb-wrapper" style="margin-bottom:24px;"><iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=750&show_text=true&height=600&appId" width="100%" height="600" style="border:none;overflow:hidden;border-radius:12px;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" loading="lazy"></iframe></div>`;
                 }
             } catch (err) {
                 console.error('[Frontend] Error parsing embed URL:', url, err);
