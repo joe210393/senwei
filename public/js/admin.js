@@ -734,9 +734,15 @@
         
         data.title = String(data.title).trim();
         data.slug = String(data.slug).trim();
-        data.excerpt = document.getElementById('news-excerpt').value || '';
+        data.excerpt = String(document.getElementById('news-excerpt').value || '').trim();
+        // Get content from editor, ensuring we get the actual HTML content
         data.content_html = editor.innerHTML || '';
-        data.cover_media_id = document.getElementById('news-cover').value || null;
+        // If editor is empty, try to get text content as fallback
+        if (!data.content_html && editor.textContent) {
+          data.content_html = '<p>' + editor.textContent + '</p>';
+        }
+        const coverMediaIdValue = document.getElementById('news-cover').value;
+        data.cover_media_id = coverMediaIdValue && coverMediaIdValue.trim() ? coverMediaIdValue.trim() : null;
         if (data.cover_media_id) {
           data.cover_media_id = parseInt(data.cover_media_id) || null;
         }
@@ -760,17 +766,47 @@
         const id = data.id; 
         delete data.id;
         
+        console.log('[Frontend] Saving news:', {
+          isEdit: !!id,
+          title: data.title,
+          slug: data.slug,
+          content_html_length: data.content_html ? data.content_html.length : 0,
+          excerpt_length: data.excerpt ? data.excerpt.length : 0
+        });
+        
+        let response;
         if (id) {
-          await api('PUT', `/api/admin/news/${id}`, data);
+          response = await api('PUT', `/api/admin/news/${id}`, data);
         } else {
-          await api('POST', '/api/admin/news', data);
+          response = await api('POST', '/api/admin/news', data);
         }
         
-        alert('儲存成功');
-        location.reload();
+        console.log('[Frontend] Save response:', response);
+        
+        // If we got a response with an id, reload the page to show the new item
+        if (response && response.ok) {
+          alert('儲存成功');
+          location.reload();
+        } else {
+          throw new Error('儲存失敗：未收到成功響應');
+        }
       } catch (err) {
         console.error('Error saving news:', err);
-        alert('儲存失敗：' + (err.message || '未知錯誤'));
+        const errorMsg = err.message || '未知錯誤';
+        // Try to parse error message if it's JSON
+        let displayMsg = errorMsg;
+        try {
+          const parsed = JSON.parse(errorMsg);
+          if (parsed.error) {
+            displayMsg = parsed.error;
+            if (parsed.details) {
+              displayMsg += ': ' + parsed.details;
+            }
+          }
+        } catch {
+          // Not JSON, use as-is
+        }
+        alert('儲存失敗：' + displayMsg);
       }
     });
   }

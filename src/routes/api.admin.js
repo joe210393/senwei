@@ -317,6 +317,16 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
   try {
     const { title, slug, content_html, excerpt, cover_media_id, published_at, is_published } = req.body || {};
     
+    console.log('[POST /api/admin/news] Received data:', {
+      title: title ? String(title).substring(0, 50) : 'empty',
+      slug: slug ? String(slug).substring(0, 50) : 'empty',
+      content_html_length: content_html ? String(content_html).length : 0,
+      excerpt_length: excerpt ? String(excerpt).length : 0,
+      cover_media_id,
+      published_at,
+      is_published
+    });
+    
     // Validate required fields
     if (!title || !String(title).trim()) {
       return res.status(400).json({ error: 'Title is required' });
@@ -334,7 +344,9 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
     const pubValue = (is_published === 1 || is_published === '1' || is_published === true) ? 1 : 0;
     const sanitizedContent = sanitizeContent(content_html || '');
     
-    await query('INSERT INTO news(title, slug, content_html, excerpt, cover_media_id, published_at, is_published) VALUES (?,?,?,?,?,?,?)', [
+    console.log('[POST /api/admin/news] Sanitized content length:', sanitizedContent.length);
+    
+    const result = await query('INSERT INTO news(title, slug, content_html, excerpt, cover_media_id, published_at, is_published) VALUES (?,?,?,?,?,?,?)', [
       String(title).trim(), 
       String(slug).trim(), 
       sanitizedContent, 
@@ -344,13 +356,26 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
       pubValue
     ]);
     
-    res.json({ ok: true });
+    const insertedId = result.lastInsertRowid;
+    console.log('[POST /api/admin/news] Inserted news with ID:', insertedId);
+    
+    // Verify the insert by reading it back
+    const verify = await query('SELECT id, title, slug, LENGTH(content_html) as content_length FROM news WHERE id = ?', [insertedId]);
+    console.log('[POST /api/admin/news] Verification:', verify[0]);
+    
+    if (!verify || verify.length === 0) {
+      throw new Error('Failed to verify inserted news');
+    }
+    
+    res.json({ ok: true, id: insertedId });
   } catch (err) {
     console.error('[POST /api/admin/news] Error:', err);
     if (err.message && err.message.includes('UNIQUE constraint')) {
       return res.status(400).json({ error: 'Slug already exists' });
     }
-    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+    // Don't send error details in production, but log them
+    const errorMsg = err.message || 'Internal Server Error';
+    res.status(500).json({ error: 'Internal Server Error', details: errorMsg });
   }
 });
 apiAdminRouter.put('/news/:id', requireAuth, async (req, res) => {
