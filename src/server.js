@@ -39,6 +39,7 @@ console.log(`Server Starting...`);
 console.log(`Zeabur Deployment: Persistent Storage Check Active`);
 console.log(`Target DB Path: ${dbPath}`);
 console.log(`DB Exists? ${fs.existsSync(dbPath)}`);
+console.log(`Deployment timestamp: ${new Date().toISOString()}`);
 
 // Run init script synchronously-ish (via fork but waiting) or just import it?
 // Importing it would run it, but it's written as a script. 
