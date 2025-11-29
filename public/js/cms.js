@@ -150,7 +150,8 @@
       if (url.pathname === currentPath) a.classList.add('active');
     });
 
-    // Language switch
+    // Language switch - REMOVED (no longer needed)
+    // Language functionality has been removed per user request
     const dict = {
       zh: {
         home: '首頁', about: '關於', 
@@ -174,23 +175,7 @@
         blog: 'ブログ', news: 'ニュース', leaderboard: '講師紹介', plans: 'プラン', contact: 'お問い合わせ', trial: '体験講座', login: 'ログイン'
       }
     };
-    function applyLang(lang) {
-      const d = dict[lang] || dict.zh;
-      qa('[data-i18n-key]').forEach(el => {
-        const key = el.getAttribute('data-i18n-key');
-        if (d[key]) el.textContent = d[key];
-      });
-      localStorage.setItem('site_lang', lang);
-    }
-    const langSel = q('#lang-select');
-    if (langSel) {
-      const saved = localStorage.getItem('site_lang') || 'zh';
-      langSel.value = saved;
-      applyLang(saved);
-      langSel.addEventListener('change', () => applyLang(langSel.value));
-    } else {
-      applyLang(localStorage.getItem('site_lang') || 'zh');
-    }
+    // Language switch functionality removed - no longer needed
 
     // Account box: show member name/email and gear to backend info
     try {
