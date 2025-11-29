@@ -2157,14 +2157,15 @@
     });
     
     eventsTable?.addEventListener('click', async (e) => {
-      const id = e.target.dataset.edit || e.target.dataset.del;
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const id = btn.dataset.edit || btn.dataset.del;
       if (!id) return;
       
       if (e.target.dataset.edit) {
         try {
           const event = await api('GET', `/api/admin/events/${id}`);
           document.getElementById('event-id').value = event.id;
-          document.getElementById('event-date').value = event.event_date;
           document.getElementById('event-type').value = event.event_type;
           document.getElementById('event-title').value = event.title || '';
           document.getElementById('event-description').value = event.description || '';
@@ -2173,6 +2174,16 @@
           document.getElementById('event-max-participants').value = event.max_participants || '';
           document.getElementById('event-is-active').checked = !!event.is_active;
           document.getElementById('event-form-title').textContent = '編輯活動';
+          
+          // 編輯模式：只顯示單個日期
+          selectedDates.clear();
+          selectedDates.add(event.event_date);
+          const eventDate = new Date(event.event_date);
+          datePickerYear = eventDate.getFullYear();
+          datePickerMonth = eventDate.getMonth();
+          renderDatePicker();
+          updateSelectedDatesDisplay();
+          
           formModal.style.display = 'flex';
         } catch (err) {
           alert('載入失敗：' + (err.message || '未知錯誤'));
