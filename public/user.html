@@ -14,11 +14,20 @@
     <h1 class="mb-4">會員中心</h1>
     <div class="row" style="gap:12px;margin-bottom:12px">
       <button class="btn ghost" data-tab="profile">會員資料</button>
+      <button class="btn ghost" data-tab="events">活動報名</button>
       <button class="btn ghost" data-tab="contracts">上傳資料</button>
       <button class="btn ghost" data-tab="courses">上課內容</button>
       <button class="btn ghost" data-tab="materials">教材</button>
     </div>
     <section id="tab-profile" class="tab-section"></section>
+    <section id="tab-events" class="tab-section hidden">
+      <div class="card">
+        <h2 class="mb-2">我的活動報名</h2>
+        <div id="events-registrations-list" style="margin-top:16px;">
+          <div style="text-align:center;padding:40px 20px;color:#999;">載入中...</div>
+        </div>
+      </div>
+    </section>
     <section id="tab-contracts" class="tab-section hidden">
       <div class="card">
         <h2 class="mb-2">上傳資料</h2>

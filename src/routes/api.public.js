@@ -511,6 +511,23 @@ apiPublicRouter.get('/members/profile', async (req, res) => {
   res.json(m);
 });
 
+// 獲取會員的活動報名記錄（需已登入）
+apiPublicRouter.get('/members/registrations', async (req, res) => {
+  const member = req.session?.member;
+  if (!member?.id) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const rows = await query(`
+    SELECT er.*,
+           e.title AS event_title, e.event_date, e.event_type, e.start_time, e.end_time, e.description
+    FROM event_registrations er
+    JOIN events e ON e.id = er.event_id
+    WHERE er.member_id = ?
+    ORDER BY er.created_at DESC
+  `, [member.id]);
+  
+  res.json(rows);
+});
+
 // 會員檔案上傳（需已登入）
 // 儲存路徑：每位會員一個獨立資料夾（私有目錄）
 const memberStorage = multer.diskStorage({
