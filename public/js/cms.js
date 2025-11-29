@@ -239,8 +239,8 @@
     // Generic page handler for new pages
     const contentPages = [
         'about-guchau', 'about-story', 'about-history', 'about-music',
-        'service-courses', 'service-commercial', 'service-sales', 'service-space', 'service-tourism',
-        'media-records'
+        'service-courses', 'service-commercial', 'service-sales', 'service-space', 'service-tourism'
+        // Note: 'media-records' is NOT in this list - it has its own handler below
     ];
     
     if (contentPages.includes(page)) {
