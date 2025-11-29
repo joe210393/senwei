@@ -257,7 +257,8 @@
     // Generic page handler for new pages
     const contentPages = [
         'about-guchau', 'about-story', 'about-history', 'about-music',
-        'service-courses', 'service-commercial', 'service-sales', 'service-space', 'service-tourism'
+        'service-courses', 'service-commercial', 'service-space', 'service-tourism'
+        // Note: 'service-sales' is NOT in this list - it has its own product listing handler below
         // Note: 'media-records' is NOT in this list - it has its own handler below
     ];
     
