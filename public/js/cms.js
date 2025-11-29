@@ -311,12 +311,64 @@
           const sections = [
               { title: '音樂課程', slug: 'service-courses', type: 'page' },
               { title: '商業演出', slug: 'service-commercial', type: 'page' },
-              { title: '樂器販售', slug: 'service-sales', type: 'page' },
+              // Note: 'service-sales' (樂器販售) removed - now has featured products section above
               { title: '共享與藝術空間', slug: 'service-space', type: 'page' },
               { title: '音樂觀光體驗', slug: 'service-tourism', type: 'page' },
               { title: '相關報導', slug: 'news', type: 'list' },
               { title: '影像紀錄', slug: 'media-records', type: 'list' }
           ];
+          
+          // Load featured products (5 latest products)
+          const featuredGrid = q('#featured-products-grid');
+          const featuredTpl = q('#featured-product-tpl');
+          if (featuredGrid && featuredTpl) {
+              try {
+                  const productsData = await fetchJson('/api/public/products?page=1&limit=5');
+                  const products = productsData.items || [];
+                  featuredGrid.innerHTML = '';
+                  
+                  if (products.length > 0) {
+                      products.forEach(product => {
+                          const node = document.importNode(featuredTpl.content, true);
+                          const card = node.querySelector('.product-card');
+                          
+                          if (card) {
+                              card.addEventListener('click', () => {
+                                  location.href = `/product-detail.html?slug=${encodeURIComponent(product.slug)}`;
+                              });
+                          }
+                          
+                          // Fill in data
+                          qa('[data-prop]', node).forEach(el => {
+                              const [attr, path] = el.getAttribute('data-prop').split(':');
+                              let value = path.split('.').reduce((o, k) => (o ? o[k] : undefined), product);
+                              
+                              if (path === 'price') {
+                                  value = Number(value || 0).toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+                              }
+                              
+                              if (attr === 'text') {
+                                  el.textContent = value ?? '';
+                              } else if (attr === 'src') {
+                                  el.src = value || '';
+                                  if (!value) {
+                                      el.style.display = 'none';
+                                  }
+                              }
+                          });
+                          
+                          featuredGrid.appendChild(node);
+                      });
+                  } else {
+                      featuredGrid.innerHTML = '<p style="text-align:center;color:#666;padding:20px;grid-column:1/-1;">暫無商品</p>';
+                  }
+              } catch (err) {
+                  console.error('[Frontend] Error loading featured products:', err);
+                  if (featuredGrid) {
+                      featuredGrid.innerHTML = '<p style="text-align:center;color:#c00;padding:20px;grid-column:1/-1;">載入失敗</p>';
+                  }
+              }
+          }
           
           homeGrid.innerHTML = '';
           
