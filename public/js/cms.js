@@ -864,33 +864,69 @@
           const url = categoryId ? `/api/public/products?category_id=${categoryId}` : '/api/public/products';
           const products = await fetchJson(url);
           console.log('[Frontend] Loaded products:', products);
-          if (productsGrid && cardTpl) {
-            productsGrid.innerHTML = '';
-            if (products && products.length > 0) {
-              products.forEach(product => {
+          console.log('[Frontend] productsGrid:', productsGrid);
+          console.log('[Frontend] cardTpl:', cardTpl);
+          
+          if (!productsGrid) {
+            console.error('[Frontend] productsGrid not found!');
+            return;
+          }
+          
+          if (!cardTpl) {
+            console.error('[Frontend] cardTpl not found!');
+            productsGrid.innerHTML = '<p style="text-align:center;color:#c00;padding:40px;">模板未找到</p>';
+            return;
+          }
+          
+          productsGrid.innerHTML = '';
+          
+          if (products && Array.isArray(products) && products.length > 0) {
+            console.log('[Frontend] Rendering', products.length, 'products');
+            products.forEach((product, index) => {
+              try {
                 const node = document.importNode(cardTpl.content, true);
                 const card = node.querySelector('.product-card');
                 
-                // Set onclick to navigate to product detail
-                if (card) {
-                  card.addEventListener('click', () => {
-                    location.href = `/product-detail.html?slug=${encodeURIComponent(product.slug)}`;
-                  });
+                if (!card) {
+                  console.error('[Frontend] Card element not found in template');
+                  return;
                 }
+                
+                // Set onclick to navigate to product detail
+                card.addEventListener('click', () => {
+                  location.href = `/product-detail.html?slug=${encodeURIComponent(product.slug)}`;
+                });
                 
                 // Fill in data
                 qa('[data-prop]', node).forEach(el => {
-                  const [attr, path] = el.getAttribute('data-prop').split(':');
-                  let value = path.split('.').reduce((o, k) => (o ? o[k] : undefined), product);
+                  const propAttr = el.getAttribute('data-prop');
+                  if (!propAttr) return;
+                  
+                  const [attr, path] = propAttr.split(':');
+                  if (!path) return;
+                  
+                  let value = path.split('.').reduce((o, k) => {
+                    if (o && typeof o === 'object') {
+                      return o[k];
+                    }
+                    return undefined;
+                  }, product);
                   
                   if (path === 'price') {
                     value = Number(value || 0).toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
                   }
                   
                   if (attr === 'text') {
-                    el.textContent = value ?? '';
+                    if (el.tagName === 'SPAN' && el.parentElement) {
+                      el.textContent = value ?? '';
+                    } else {
+                      el.textContent = value ?? '';
+                    }
                   } else if (attr === 'src') {
                     el.src = value || '';
+                    if (!value) {
+                      el.style.display = 'none';
+                    }
                   } else if (attr === 'onclick') {
                     // Already handled above with addEventListener
                   } else {
@@ -899,10 +935,14 @@
                 });
                 
                 productsGrid.appendChild(node);
-              });
-            } else {
-              productsGrid.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">目前沒有商品</p>';
-            }
+                console.log('[Frontend] Product', index, 'rendered:', product.name);
+              } catch (err) {
+                console.error('[Frontend] Error rendering product', index, ':', err, product);
+              }
+            });
+          } else {
+            console.log('[Frontend] No products to display');
+            productsGrid.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">目前沒有商品</p>';
           }
         } catch (err) {
           console.error('[Frontend] Error loading products:', err);
