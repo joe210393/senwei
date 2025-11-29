@@ -111,7 +111,7 @@
     if (bg) bg.value = dict.default_bg_color || '#f7f7f7';
     // Per-page BG URLs
     const keys = [
-      'bg_home_url','bg_blog_url','bg_blog_post_url','bg_news_url','bg_news_post_url','bg_leaderboard_url','bg_plans_url','bg_trial_url','bg_contact_url','bg_about_url'
+      'bg_home_url','bg_news_url','bg_news_post_url','bg_contact_url','bg_about_url'
     ];
     keys.forEach(k => { const el = document.getElementById(k); if (el) el.value = dict[k] || ''; });
     document.getElementById('save-settings')?.addEventListener('click', async () => {

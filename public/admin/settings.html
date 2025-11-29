@@ -34,19 +34,16 @@
           </select>
         </div>
       </div>
-      <h3 class="mt-6 mb-2">每頁背景（從媒體庫選擇圖片）</h3>
+      <h3 class="mt-6 mb-2">頁面背景（通用）</h3>
       <div class="grid cols-2">
-        <div><label>Home 背景圖</label><div class="row"><input id="bg_home_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_home_url">選擇</button><button type="button" class="ghost" data-upload="bg_home_url">上傳</button></div></div>
-        <div><label>Blog 背景圖</label><div class="row"><input id="bg_blog_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_blog_url">選擇</button><button type="button" class="ghost" data-upload="bg_blog_url">上傳</button></div></div>
-        <div><label>Blog 內文 背景圖</label><div class="row"><input id="bg_blog_post_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_blog_post_url">選擇</button><button type="button" class="ghost" data-upload="bg_blog_post_url">上傳</button></div></div>
-        <div><label>News 背景圖</label><div class="row"><input id="bg_news_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_news_url">選擇</button><button type="button" class="ghost" data-upload="bg_news_url">上傳</button></div></div>
-        <div><label>News 內文 背景圖</label><div class="row"><input id="bg_news_post_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_news_post_url">選擇</button><button type="button" class="ghost" data-upload="bg_news_post_url">上傳</button></div></div>
-        <div><label>Leaderboard 背景圖</label><div class="row"><input id="bg_leaderboard_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_leaderboard_url">選擇</button><button type="button" class="ghost" data-upload="bg_leaderboard_url">上傳</button></div></div>
-        <div><label>Plans 背景圖</label><div class="row"><input id="bg_plans_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_plans_url">選擇</button><button type="button" class="ghost" data-upload="bg_plans_url">上傳</button></div></div>
-        <div><label>Trial 背景圖</label><div class="row"><input id="bg_trial_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_trial_url">選擇</button><button type="button" class="ghost" data-upload="bg_trial_url">上傳</button></div></div>
-        <div><label>Contact 背景圖</label><div class="row"><input id="bg_contact_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_contact_url">選擇</button><button type="button" class="ghost" data-upload="bg_contact_url">上傳</button></div></div>
-        <div><label>About 背景圖</label><div class="row"><input id="bg_about_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_about_url">選擇</button><button type="button" class="ghost" data-upload="bg_about_url">上傳</button></div></div>
+        <div><label>首頁 (Home)</label><div class="row"><input id="bg_home_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_home_url">選擇</button><button type="button" class="ghost" data-upload="bg_home_url">上傳</button></div></div>
+        <div><label>相關報導 (News)</label><div class="row"><input id="bg_news_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_news_url">選擇</button><button type="button" class="ghost" data-upload="bg_news_url">上傳</button></div></div>
+        <div><label>相關報導內文 (News Post)</label><div class="row"><input id="bg_news_post_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_news_post_url">選擇</button><button type="button" class="ghost" data-upload="bg_news_post_url">上傳</button></div></div>
+        <div><label>聯絡我們 (Contact)</label><div class="row"><input id="bg_contact_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_contact_url">選擇</button><button type="button" class="ghost" data-upload="bg_contact_url">上傳</button></div></div>
+        <div><label>關於/服務預設 (About/Services Default)</label><div class="row"><input id="bg_about_url" placeholder="/uploads/..." readonly><button type="button" class="ghost" data-pick="bg_about_url">選擇</button><button type="button" class="ghost" data-upload="bg_about_url">上傳</button></div></div>
       </div>
+      <p class="mt-2 text-sm text-muted">註：各個「關於」與「服務項目」子頁面的背景圖，請至各自的編輯頁面中設定。</p>
+
       <input type="file" id="bg-upload-file" accept="image/*" style="display:none">
       <div id="picker" class="card mt-4" style="display:none">
         <div class="row" style="justify-content:space-between;align-items:center"><h3 class="mb-2">選擇背景圖片</h3><button class="ghost" id="picker-close">關閉</button></div>
@@ -56,7 +53,5 @@
       <div class="mt-4"><button id="save-settings">儲存</button></div>
     </div>
   </main>
-  
 </body>
 </html>
-
