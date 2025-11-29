@@ -130,19 +130,40 @@ try {
 
   console.log('Applying structure updates...');
   
-  // Insert default pages if missing
-  const insertPage = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content_html, is_published) VALUES (?, ?, ?, 1)');
-  insertPage.run('about-guchau', '關於鼓潮', '<p>關於鼓潮的內容...</p>');
-  insertPage.run('about-story', '品牌故事', '<p>品牌故事內容...</p>');
-  insertPage.run('about-history', '鼓潮音樂歷程', '<p>鼓潮音樂歷程內容...</p>');
+  // Insert default pages if missing (use INSERT OR REPLACE to ensure they exist)
+  const insertPage = db.prepare('INSERT OR REPLACE INTO pages (slug, title, content_html, is_published) VALUES (?, ?, COALESCE((SELECT content_html FROM pages WHERE slug = ?), ?), 1)');
+  // For new pages, use INSERT OR IGNORE to avoid overwriting existing content
+  const insertPageNew = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content_html, is_published) VALUES (?, ?, ?, 1)');
   
-  insertPage.run('service-courses', '音樂課程', '<p>音樂課程內容...</p>');
-  insertPage.run('service-commercial', '商業演出', '<p>商業演出內容...</p>');
-  insertPage.run('service-sales', '樂器販售', '<p>樂器販售內容...</p>');
-  insertPage.run('service-space', '共享與藝術空間', '<p>共享與藝術空間內容...</p>');
-  insertPage.run('service-tourism', '音樂觀光體驗', '<p>音樂觀光體驗內容...</p>');
+  insertPageNew.run('about-guchau', '關於鼓潮', '<p>關於鼓潮的內容...</p>');
+  insertPageNew.run('about-story', '品牌故事', '<p>品牌故事內容...</p>');
+  insertPageNew.run('about-history', '鼓潮音樂歷程', '<p>鼓潮音樂歷程內容...</p>');
   
-  insertPage.run('media-records', '影像紀錄', '<p>影像紀錄內容...</p>');
+  // Ensure service pages exist (create if missing, but don't overwrite existing content)
+  insertPageNew.run('service-courses', '音樂課程', '<p>音樂課程內容...</p>');
+  insertPageNew.run('service-commercial', '商業演出', '<p>商業演出內容...</p>');
+  insertPageNew.run('service-sales', '樂器販售', '<p>樂器販售內容...</p>');
+  insertPageNew.run('service-space', '共享與藝術空間', '<p>共享與藝術空間內容...</p>');
+  insertPageNew.run('service-tourism', '音樂觀光體驗', '<p>音樂觀光體驗內容...</p>');
+  
+  insertPageNew.run('media-records', '影像紀錄', '<p>影像紀錄內容...</p>');
+  
+  // Double-check: if any service page is still missing, create it with minimal content
+  const checkPage = db.prepare('SELECT id FROM pages WHERE slug = ?');
+  const servicePages = [
+    { slug: 'service-courses', title: '音樂課程' },
+    { slug: 'service-commercial', title: '商業演出' },
+    { slug: 'service-sales', title: '樂器販售' },
+    { slug: 'service-space', title: '共享與藝術空間' },
+    { slug: 'service-tourism', title: '音樂觀光體驗' }
+  ];
+  servicePages.forEach(page => {
+    const exists = checkPage.get(page.slug);
+    if (!exists) {
+      console.log(`Creating missing page: ${page.slug}`);
+      insertPageNew.run(page.slug, page.title, `<p>${page.title}內容...</p>`);
+    }
+  });
 
   // Re-seed Menus to match requested structure
   // We check if the new structure exists, if not (or partial), we enforce it.
