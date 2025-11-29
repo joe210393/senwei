@@ -347,67 +347,113 @@
     } else if (page === 'media-records') {
         const params = new URLSearchParams(location.search);
         const pageNum = Number(params.get('page') || '1');
-        const data = await fetchJson(`/api/public/media-records?page=${pageNum}&limit=9`);
-        const gridWrap = q('#media-list');
-        const tpl = q('#media-item-tpl');
-        gridWrap.innerHTML = '';
-        
-        function getEmbed(url) {
-            if (!url) return '';
-            try {
-                const u = new URL(url);
-                if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
-                    let vid = u.searchParams.get('v');
-                    if (u.hostname === 'youtu.be') vid = u.pathname.slice(1);
-                    if (u.pathname.includes('/embed/')) vid = u.pathname.split('/')[2];
-                    if (vid) return `<iframe src="https://www.youtube.com/embed/${vid}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:200px;"></iframe>`;
-                }
-                if (u.hostname.includes('facebook.com')) {
-                    // Facebook basic iframe embed
-                    const encoded = encodeURIComponent(url);
-                    return `<iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=500&show_text=true&height=200&appId" width="100%" height="200" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
-                }
-            } catch {}
-            return ''; // Fallback or link
-        }
-
-        data.items.forEach(item => {
-            const node = document.importNode(tpl.content, true);
-            const embedHtml = getEmbed(item.embed_url);
+        try {
+            const data = await fetchJson(`/api/public/media-records?page=${pageNum}&limit=9`);
+            console.log('[Frontend] Media records API response:', data);
+            const gridWrap = q('#media-list');
+            const tpl = q('#media-item-tpl');
             
-            qa('[data-prop]', node).forEach(el => {
-                const [attr, path] = el.getAttribute('data-prop').split(':');
-                let value;
-                if (path === 'title') value = item.title;
-                else if (path === 'excerpt') value = item.excerpt;
-                else if (path === 'link') value = `/media-record-post.html?slug=${encodeURIComponent(item.slug)}`;
-                else if (path === 'embed') {
-                    if (attr === 'html') { el.innerHTML = embedHtml; return; }
+            if (!gridWrap) {
+                console.error('[Frontend] #media-list element not found!');
+                return;
+            }
+            if (!tpl) {
+                console.error('[Frontend] #media-item-tpl template not found!');
+                return;
+            }
+            
+            gridWrap.innerHTML = '';
+            
+            if (!data.items || data.items.length === 0) {
+                console.log('[Frontend] No media records found. Total:', data.total);
+                gridWrap.innerHTML = '<p style="text-align:center;padding:40px;color:#666;">暫無影像紀錄</p>';
+                applyBackgroundFromSettings('about', settings);
+                return;
+            }
+            
+            function getEmbed(url) {
+                if (!url) return '';
+                try {
+                    const u = new URL(url);
+                    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+                        let vid = u.searchParams.get('v');
+                        if (u.hostname === 'youtu.be') vid = u.pathname.slice(1);
+                        if (u.pathname.includes('/embed/')) vid = u.pathname.split('/')[2];
+                        if (vid) return `<iframe src="https://www.youtube.com/embed/${vid}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:200px;"></iframe>`;
+                    }
+                    if (u.hostname.includes('facebook.com')) {
+                        // Facebook basic iframe embed
+                        const encoded = encodeURIComponent(url);
+                        return `<iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=500&show_text=true&height=200&appId" width="100%" height="200" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+                    }
+                } catch {}
+                return ''; // Fallback or link
+            }
+
+            console.log('[Frontend] Rendering', data.items.length, 'media records');
+            data.items.forEach((item, idx) => {
+                console.log(`[Frontend] Item ${idx}:`, item.title, 'is_published check passed');
+                const node = document.importNode(tpl.content, true);
+                const embedHtml = getEmbed(item.embed_url);
+                
+                // Process all data-prop attributes
+                qa('[data-prop]', node).forEach(el => {
+                    const propValue = el.getAttribute('data-prop');
+                    const [attr, path] = propValue.split(':');
+                    let value;
+                    if (path === 'title') value = item.title;
+                    else if (path === 'excerpt') value = item.excerpt;
+                    else if (path === 'link') value = `/media-record-post.html?slug=${encodeURIComponent(item.slug)}`;
+                    else if (path === 'embed') {
+                        if (attr === 'html') { el.innerHTML = embedHtml; return; }
+                    }
+                    
+                    // Apply the value based on attribute type
+                    if (attr === 'text') {
+                        el.textContent = value || '';
+                    } else if (attr === 'href') {
+                        el.setAttribute('href', value || '#');
+                    } else {
+                        el.setAttribute(attr, value || '');
+                    }
+                });
+                
+                // Special handling for title link: set both href and text
+                const titleLink = node.querySelector('h3 a');
+                if (titleLink) {
+                    titleLink.href = `/media-record-post.html?slug=${encodeURIComponent(item.slug)}`;
+                    titleLink.textContent = item.title || '';
                 }
                 
-                if (attr === 'text') el.textContent = value || '';
-                else el.setAttribute(attr, value || '');
+                if (!embedHtml) {
+                    // If no embed, maybe show cover image?
+                    // For now just hide embed container if empty
+                    const container = node.querySelector('.media-embed-container');
+                    if (container && !embedHtml) container.style.display = 'none';
+                }
+                gridWrap.appendChild(node);
             });
-            if (!embedHtml) {
-                // If no embed, maybe show cover image?
-                // For now just hide embed container if empty
-                const container = node.querySelector('.media-embed-container');
-                if (container && !embedHtml) container.style.display = 'none';
+            
+            // Pager
+            const pager = q('#pager');
+            if (pager) {
+                const totalPages = Math.ceil(data.total / data.limit);
+                pager.innerHTML = '';
+                for (let i = 1; i <= totalPages; i++) {
+                    const a = document.createElement('a');
+                    a.href = `?page=${i}`;
+                    a.textContent = i;
+                    a.style.marginRight = '8px';
+                    if (i === data.page) a.style.fontWeight = '700';
+                    pager.appendChild(a);
+                }
             }
-            gridWrap.appendChild(node);
-        });
-        
-        // Pager
-        const pager = q('#pager');
-        const totalPages = Math.ceil(data.total / data.limit);
-        pager.innerHTML = '';
-        for (let i = 1; i <= totalPages; i++) {
-            const a = document.createElement('a');
-            a.href = `?page=${i}`;
-            a.textContent = i;
-            a.style.marginRight = '8px';
-            if (i === data.page) a.style.fontWeight = '700';
-            pager.appendChild(a);
+        } catch (err) {
+            console.error('[Frontend] Error loading media records:', err);
+            const gridWrap = q('#media-list');
+            if (gridWrap) {
+                gridWrap.innerHTML = '<p style="text-align:center;padding:40px;color:#c00;">載入失敗，請稍後再試</p>';
+            }
         }
         applyBackgroundFromSettings('about', settings); // Reuse about bg or add new setting
     } else if (page === 'media-record-post') {
