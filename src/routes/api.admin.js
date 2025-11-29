@@ -764,79 +764,100 @@ apiAdminRouter.get('/products/:id', requireAuth, async (req, res) => {
 });
 
 apiAdminRouter.post('/products', requireAuth, async (req, res) => {
-  const { name, price, category_id, cover_media_id, description_html, is_published, images } = req.body || {};
-  if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
-  if (price === undefined || price === null) return res.status(400).json({ error: 'price required' });
-  
-  // Generate slug from name
-  const slugBase = String(name).trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '');
-  let slug = slugBase;
-  let counter = 1;
-  while (true) {
-    const existing = await query('SELECT id FROM products WHERE slug = ?', [slug]);
-    if (existing.length === 0) break;
-    slug = `${slugBase}-${counter}`;
-    counter++;
-  }
-  
-  const sanitizedHtml = sanitizeContent(description_html || '');
-  const result = await query(
-    'INSERT INTO products (name, slug, price, category_id, cover_media_id, description_html, is_published) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [String(name).trim(), slug, Number(price), category_id || null, cover_media_id || null, sanitizedHtml, is_published ? 1 : 0]
-  );
-  const productId = result.lastInsertRowid;
-  
-  // Insert product images
-  if (Array.isArray(images) && images.length > 0) {
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      if (img.media_id) {
-        await query('INSERT INTO product_images (product_id, media_id, order_index) VALUES (?, ?, ?)', [productId, img.media_id, i]);
-      }
-    }
-  }
-  
-  res.json({ id: productId });
-});
-
-apiAdminRouter.put('/products/:id', requireAuth, async (req, res) => {
-  const { name, price, category_id, cover_media_id, description_html, is_published, images } = req.body || {};
-  if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
-  if (price === undefined || price === null) return res.status(400).json({ error: 'price required' });
-  
-  // Update slug if name changed
-  const existing = await query('SELECT slug FROM products WHERE id = ?', [req.params.id]);
-  let slug = existing[0]?.slug;
-  if (!slug || slug !== String(name).trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '')) {
+  try {
+    const { name, price, category_id, cover_media_id, description_html, is_published, images } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
+    if (price === undefined || price === null) return res.status(400).json({ error: 'price required' });
+    
+    // Normalize category_id and cover_media_id (convert empty string to null)
+    const normalizedCategoryId = (category_id && String(category_id).trim()) ? Number(category_id) : null;
+    const normalizedCoverMediaId = (cover_media_id && String(cover_media_id).trim()) ? Number(cover_media_id) : null;
+    
+    // Generate slug from name
     const slugBase = String(name).trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '');
-    slug = slugBase;
+    let slug = slugBase;
     let counter = 1;
     while (true) {
-      const check = await query('SELECT id FROM products WHERE slug = ? AND id != ?', [slug, req.params.id]);
-      if (check.length === 0) break;
+      const existing = await query('SELECT id FROM products WHERE slug = ?', [slug]);
+      if (existing.length === 0) break;
       slug = `${slugBase}-${counter}`;
       counter++;
     }
-  }
-  
-  const sanitizedHtml = sanitizeContent(description_html || '');
-  await query(
-    'UPDATE products SET name=?, slug=?, price=?, category_id=?, cover_media_id=?, description_html=?, is_published=?, updated_at=datetime("now") WHERE id=?',
-    [String(name).trim(), slug, Number(price), category_id || null, cover_media_id || null, sanitizedHtml, is_published ? 1 : 0, req.params.id]
-  );
-  
-  // Update product images (delete all and re-insert)
-  await query('DELETE FROM product_images WHERE product_id = ?', [req.params.id]);
-  if (Array.isArray(images) && images.length > 0) {
-    for (let i = 0; i < images.length; i++) {
-      const img = images[i];
-      if (img.media_id) {
-        await query('INSERT INTO product_images (product_id, media_id, order_index) VALUES (?, ?, ?)', [req.params.id, img.media_id, i]);
+    
+    const sanitizedHtml = sanitizeContent(description_html || '');
+    const result = await query(
+      'INSERT INTO products (name, slug, price, category_id, cover_media_id, description_html, is_published) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [String(name).trim(), slug, Number(price), normalizedCategoryId, normalizedCoverMediaId, sanitizedHtml, is_published ? 1 : 0]
+    );
+    const productId = result.lastInsertRowid;
+    
+    // Insert product images
+    if (Array.isArray(images) && images.length > 0) {
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (img && img.media_id) {
+          await query('INSERT INTO product_images (product_id, media_id, order_index) VALUES (?, ?, ?)', [productId, Number(img.media_id), i]);
+        }
       }
     }
+    
+    res.json({ id: productId });
+  } catch (err) {
+    console.error('[POST /products] Error:', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
-  
-  res.json({ ok: true });
+});
+
+apiAdminRouter.put('/products/:id', requireAuth, async (req, res) => {
+  try {
+    const { name, price, category_id, cover_media_id, description_html, is_published, images } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
+    if (price === undefined || price === null) return res.status(400).json({ error: 'price required' });
+    
+    // Normalize category_id and cover_media_id (convert empty string to null)
+    const normalizedCategoryId = (category_id && String(category_id).trim()) ? Number(category_id) : null;
+    const normalizedCoverMediaId = (cover_media_id && String(cover_media_id).trim()) ? Number(cover_media_id) : null;
+    
+    // Update slug if name changed
+    const existing = await query('SELECT slug FROM products WHERE id = ?', [req.params.id]);
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    let slug = existing[0]?.slug;
+    if (!slug || slug !== String(name).trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '')) {
+      const slugBase = String(name).trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-+|-+$/g, '');
+      slug = slugBase;
+      let counter = 1;
+      while (true) {
+        const check = await query('SELECT id FROM products WHERE slug = ? AND id != ?', [slug, req.params.id]);
+        if (check.length === 0) break;
+        slug = `${slugBase}-${counter}`;
+        counter++;
+      }
+    }
+    
+    const sanitizedHtml = sanitizeContent(description_html || '');
+    await query(
+      'UPDATE products SET name=?, slug=?, price=?, category_id=?, cover_media_id=?, description_html=?, is_published=?, updated_at=datetime("now") WHERE id=?',
+      [String(name).trim(), slug, Number(price), normalizedCategoryId, normalizedCoverMediaId, sanitizedHtml, is_published ? 1 : 0, req.params.id]
+    );
+    
+    // Update product images (delete all and re-insert)
+    await query('DELETE FROM product_images WHERE product_id = ?', [req.params.id]);
+    if (Array.isArray(images) && images.length > 0) {
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (img && img.media_id) {
+          await query('INSERT INTO product_images (product_id, media_id, order_index) VALUES (?, ?, ?)', [req.params.id, Number(img.media_id), i]);
+        }
+      }
+    }
+    
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[PUT /products/:id] Error:', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
 });
 
 apiAdminRouter.delete('/products/:id', requireEditorOrAdmin, async (req, res) => {

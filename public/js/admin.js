@@ -1474,6 +1474,15 @@
         btn.addEventListener('click', () => {
           if (pickerMode === 'cover') {
             prodForm.querySelector('[name="cover_media_id"]').value = it.id || '';
+          } else if (pickerMode === 'description') {
+            // Insert image into description editor
+            const img = document.createElement('img');
+            img.src = it.file_path;
+            img.alt = '';
+            img.style.maxWidth = '100%';
+            if (descEditor) {
+              descEditor.appendChild(img);
+            }
           } else {
             productImages.push({ media_id: it.id, file_path: it.file_path, file_name: it.file_name });
             renderProductImages();
@@ -1553,7 +1562,9 @@
       <button data-cmd="italic">斜體</button>
       <button data-cmd="insertUnorderedList">項目符號</button>
       <button data-cmd="formatBlock" data-value="h2">H2</button>
-      <button id="product-desc-insert-img" class="ghost">插入圖片</button>
+      <button id="product-desc-insert-img" class="ghost">選擇圖片</button>
+      <button id="product-desc-upload-img" class="ghost">上傳圖片</button>
+      <input type="file" id="product-desc-upload-file" accept="image/*" style="display:none">
     `;
     if (descEditor && descEditor.parentNode) {
       descEditor.parentNode.insertBefore(descToolbar, descEditor);
@@ -1566,12 +1577,31 @@
       document.execCommand(cmd, false, val);
     });
     
-    document.getElementById('product-desc-insert-img')?.addEventListener('click', async () => {
-      const mediaId = prompt('請輸入 Media ID:');
-      if (!mediaId) return;
-      const media = await api('GET', `/api/admin/media/${mediaId}`);
-      if (media && media.file_path) {
-        document.execCommand('insertImage', false, media.file_path);
+    // Insert image from media picker
+    document.getElementById('product-desc-insert-img')?.addEventListener('click', () => {
+      pickerMode = 'description';
+      picker.style.display = 'flex';
+      loadMediaForPicker(1);
+    });
+    
+    // Upload image for description
+    document.getElementById('product-desc-upload-img')?.addEventListener('click', () => {
+      document.getElementById('product-desc-upload-file')?.click();
+    });
+    
+    document.getElementById('product-desc-upload-file')?.addEventListener('change', async (e) => {
+      if (!e.target.files || !e.target.files[0]) return;
+      const csrf = await getCsrf();
+      const fd = new FormData();
+      fd.append('file', e.target.files[0]);
+      const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
+      const j = await res.json();
+      if (j && j.file_path) {
+        const img = document.createElement('img');
+        img.src = j.file_path;
+        img.alt = '';
+        img.style.maxWidth = '100%';
+        descEditor.appendChild(img);
       }
     });
     
@@ -1583,18 +1613,27 @@
         data.description_html = descEditor ? descEditor.innerHTML : '';
         data.is_published = prodForm.querySelector('[name="is_published"]').checked ? 1 : 0;
         data.images = productImages;
+        // Normalize empty strings to null
+        if (data.category_id === '') data.category_id = null;
+        if (data.cover_media_id === '') data.cover_media_id = null;
         const id = data.id;
         delete data.id;
-        if (id) {
-          await api('PUT', `/api/admin/products/${id}`, data);
-        } else {
-          await api('POST', '/api/admin/products', data);
+        try {
+          if (id) {
+            await api('PUT', `/api/admin/products/${id}`, data);
+          } else {
+            await api('POST', '/api/admin/products', data);
+          }
+          alert('儲存成功！');
+          await loadProducts();
+          prodForm.reset();
+          if (descEditor) descEditor.innerHTML = '';
+          productImages = [];
+          renderProductImages();
+        } catch (err) {
+          console.error('Save error:', err);
+          alert('儲存失敗：' + (err.message || '未知錯誤'));
         }
-        await loadProducts();
-        prodForm.reset();
-        if (descEditor) descEditor.innerHTML = '';
-        productImages = [];
-        renderProductImages();
       });
     }
     
