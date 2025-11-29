@@ -869,25 +869,30 @@ apiAdminRouter.delete('/products/:id', requireEditorOrAdmin, async (req, res) =>
 
 // 獲取活動列表（後台）
 apiAdminRouter.get('/events', requireAuth, async (req, res) => {
-  const { year, month } = req.query;
-  let whereClause = '1=1';
-  const params = [];
-  
-  if (year && month) {
-    whereClause += ' AND strftime("%Y", event_date) = ? AND strftime("%m", event_date) = ?';
-    params.push(String(year), String(month).padStart(2, '0'));
+  try {
+    const { year, month } = req.query;
+    let whereClause = '1=1';
+    const params = [];
+    
+    if (year && month) {
+      whereClause += ' AND strftime("%Y", event_date) = ? AND strftime("%m", event_date) = ?';
+      params.push(String(year), String(month).padStart(2, '0'));
+    }
+    
+    const rows = await query(`
+      SELECT e.*, 
+             COUNT(er.id) as registration_count
+      FROM events e
+      LEFT JOIN event_registrations er ON er.event_id = e.id AND er.status = 'interested'
+      WHERE ${whereClause}
+      GROUP BY e.id
+      ORDER BY e.event_date ASC, e.start_time ASC
+    `, params);
+    res.json(rows);
+  } catch (err) {
+    console.error('[GET /api/admin/events] Error:', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
-  
-  const rows = await query(`
-    SELECT e.*, 
-           COUNT(er.id) as registration_count
-    FROM events e
-    LEFT JOIN event_registrations er ON er.event_id = e.id AND er.status = 'interested'
-    WHERE ${whereClause}
-    GROUP BY e.id
-    ORDER BY e.event_date ASC, e.start_time ASC
-  `, params);
-  res.json(rows);
 });
 
 // 獲取單個活動（後台）
@@ -899,51 +904,61 @@ apiAdminRouter.get('/events/:id', requireAuth, async (req, res) => {
 
 // 創建活動（後台）
 apiAdminRouter.post('/events', requireEditorOrAdmin, async (req, res) => {
-  const { event_date, event_type, title, description, start_time, end_time, max_participants, is_active } = req.body;
-  
-  if (!event_date || !event_type || !title) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  try {
+    const { event_date, event_type, title, description, start_time, end_time, max_participants, is_active } = req.body;
+    
+    if (!event_date || !event_type || !title) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const result = await query(`
+      INSERT INTO events (event_date, event_type, title, description, start_time, end_time, max_participants, is_active, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `, [
+      String(event_date),
+      String(event_type),
+      String(title),
+      description || null,
+      start_time || null,
+      end_time || null,
+      max_participants ? Number(max_participants) : null,
+      is_active ? 1 : 0
+    ]);
+    
+    res.json({ ok: true, id: result.insertId || result.lastInsertRowid });
+  } catch (err) {
+    console.error('[POST /api/admin/events] Error:', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
   }
-  
-  const result = await query(`
-    INSERT INTO events (event_date, event_type, title, description, start_time, end_time, max_participants, is_active, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-  `, [
-    String(event_date),
-    String(event_type),
-    String(title),
-    description || null,
-    start_time || null,
-    end_time || null,
-    max_participants ? Number(max_participants) : null,
-    is_active ? 1 : 0
-  ]);
-  
-  res.json({ ok: true, id: result.insertId });
 });
 
 // 更新活動（後台）
 apiAdminRouter.put('/events/:id', requireEditorOrAdmin, async (req, res) => {
-  const { event_date, event_type, title, description, start_time, end_time, max_participants, is_active } = req.body;
-  
-  await query(`
-    UPDATE events 
-    SET event_date = ?, event_type = ?, title = ?, description = ?, 
-        start_time = ?, end_time = ?, max_participants = ?, is_active = ?, updated_at = datetime('now')
-    WHERE id = ?
-  `, [
-    String(event_date),
-    String(event_type),
-    String(title),
-    description || null,
-    start_time || null,
-    end_time || null,
-    max_participants ? Number(max_participants) : null,
-    is_active ? 1 : 0,
-    req.params.id
-  ]);
-  
-  res.json({ ok: true });
+  try {
+    const { event_date, event_type, title, description, start_time, end_time, max_participants, is_active } = req.body;
+    
+    await query(`
+      UPDATE events 
+      SET event_date = ?, event_type = ?, title = ?, description = ?, 
+          start_time = ?, end_time = ?, max_participants = ?, is_active = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `, [
+      String(event_date),
+      String(event_type),
+      String(title),
+      description || null,
+      start_time || null,
+      end_time || null,
+      max_participants ? Number(max_participants) : null,
+      is_active ? 1 : 0,
+      req.params.id
+    ]);
+    
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[PUT /api/admin/events/:id] Error:', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
 });
 
 // 刪除活動（後台）
