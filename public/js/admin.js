@@ -1943,12 +1943,20 @@
       loadEventsList();
     });
     
+    // 日期選擇相關變數
+    let selectedDates = new Set();
+    let datePickerYear = currentYear;
+    let datePickerMonth = currentMonth;
+    
     createBtn?.addEventListener('click', () => {
       eventForm.reset();
       document.getElementById('event-id').value = '';
       document.getElementById('event-form-title').textContent = '新增活動';
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('event-date').value = today;
+      selectedDates.clear();
+      datePickerYear = currentYear;
+      datePickerMonth = currentMonth;
+      renderDatePicker();
+      updateSelectedDatesDisplay();
       formModal.style.display = 'flex';
     });
     
@@ -1960,6 +1968,129 @@
       formModal.style.display = 'none';
     });
     
+    // 渲染日期選擇器
+    function renderDatePicker() {
+      const calendarEl = document.getElementById('date-picker-calendar');
+      const monthLabel = document.getElementById('date-picker-month');
+      if (!calendarEl) return;
+      
+      const firstDay = new Date(datePickerYear, datePickerMonth, 1);
+      const lastDay = new Date(datePickerYear, datePickerMonth + 1, 0);
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      
+      calendarEl.innerHTML = '';
+      
+      // 星期標題
+      dayNames.forEach(day => {
+        const header = document.createElement('div');
+        header.style.textAlign = 'center';
+        header.style.fontWeight = '600';
+        header.style.padding = '8px';
+        header.style.fontSize = '14px';
+        header.style.color = '#666';
+        header.textContent = day;
+        calendarEl.appendChild(header);
+      });
+      
+      // 日期格子
+      const currentDate = new Date(startDate);
+      for (let i = 0; i < 42; i++) {
+        const dayEl = document.createElement('div');
+        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+        const isCurrentMonth = currentDate.getMonth() === datePickerMonth;
+        const isToday = dateStr === new Date().toISOString().split('T')[0];
+        const isSelected = selectedDates.has(dateStr);
+        
+        dayEl.style.aspectRatio = '1';
+        dayEl.style.border = isSelected ? '2px solid #111827' : '1px solid #e5e7eb';
+        dayEl.style.borderRadius = '8px';
+        dayEl.style.padding = '8px';
+        dayEl.style.cursor = isCurrentMonth ? 'pointer' : 'default';
+        dayEl.style.transition = 'all 0.2s';
+        dayEl.style.background = isSelected ? '#111827' : (isCurrentMonth ? '#fff' : '#f9fafb');
+        dayEl.style.color = isSelected ? '#fff' : (isCurrentMonth ? '#111827' : '#999');
+        dayEl.style.opacity = isCurrentMonth ? '1' : '0.3';
+        dayEl.style.fontWeight = isToday ? '700' : '500';
+        dayEl.style.fontSize = '14px';
+        dayEl.style.display = 'flex';
+        dayEl.style.alignItems = 'center';
+        dayEl.style.justifyContent = 'center';
+        dayEl.textContent = currentDate.getDate();
+        
+        if (isCurrentMonth) {
+          dayEl.addEventListener('click', () => {
+            if (selectedDates.has(dateStr)) {
+              selectedDates.delete(dateStr);
+            } else {
+              selectedDates.add(dateStr);
+            }
+            renderDatePicker();
+            updateSelectedDatesDisplay();
+          });
+        }
+        
+        calendarEl.appendChild(dayEl);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      
+      if (monthLabel) {
+        monthLabel.textContent = `${datePickerYear}年 ${datePickerMonth + 1}月`;
+      }
+    }
+    
+    // 更新已選日期顯示
+    function updateSelectedDatesDisplay() {
+      const tagsEl = document.getElementById('selected-dates-tags');
+      if (!tagsEl) return;
+      
+      if (selectedDates.size === 0) {
+        tagsEl.innerHTML = '<span style="color:#999;font-size:14px;">尚未選擇日期</span>';
+        return;
+      }
+      
+      const sortedDates = Array.from(selectedDates).sort();
+      tagsEl.innerHTML = sortedDates.map(dateStr => {
+        const date = new Date(dateStr);
+        const formatted = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
+        return `
+          <span style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:#111827;color:#fff;border-radius:6px;font-size:14px;">
+            ${formatted}
+            <button type="button" data-remove-date="${dateStr}" style="background:none;border:none;color:#fff;cursor:pointer;padding:0;margin:0;font-size:16px;line-height:1;">×</button>
+          </span>
+        `;
+      }).join('');
+      
+      // 綁定移除按鈕
+      tagsEl.querySelectorAll('[data-remove-date]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const dateStr = e.target.closest('[data-remove-date]').getAttribute('data-remove-date');
+          selectedDates.delete(dateStr);
+          renderDatePicker();
+          updateSelectedDatesDisplay();
+        });
+      });
+    }
+    
+    // 日期選擇器月份切換
+    document.getElementById('date-picker-prev-month')?.addEventListener('click', () => {
+      datePickerMonth--;
+      if (datePickerMonth < 0) {
+        datePickerMonth = 11;
+        datePickerYear--;
+      }
+      renderDatePicker();
+    });
+    
+    document.getElementById('date-picker-next-month')?.addEventListener('click', () => {
+      datePickerMonth++;
+      if (datePickerMonth > 11) {
+        datePickerMonth = 0;
+        datePickerYear++;
+      }
+      renderDatePicker();
+    });
+    
     eventForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(eventForm);
@@ -1968,17 +2099,60 @@
       const id = data.id;
       delete data.id;
       
-      try {
-        if (id) {
+      // 編輯模式：單個活動更新
+      if (id) {
+        try {
           await api('PUT', `/api/admin/events/${id}`, data);
-        } else {
-          await api('POST', '/api/admin/events', data);
+          formModal.style.display = 'none';
+          renderCalendar();
+          loadEventsList();
+        } catch (err) {
+          alert('儲存失敗：' + (err.message || '未知錯誤'));
         }
-        formModal.style.display = 'none';
-        renderCalendar();
-        loadEventsList();
+        return;
+      }
+      
+      // 新增模式：為每個選中的日期創建活動
+      if (selectedDates.size === 0) {
+        alert('請至少選擇一個日期');
+        return;
+      }
+      
+      const submitBtn = document.getElementById('event-submit-btn');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = '建立中...';
+      
+      try {
+        const dates = Array.from(selectedDates).sort();
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const dateStr of dates) {
+          try {
+            const eventData = { ...data, event_date: dateStr };
+            await api('POST', '/api/admin/events', eventData);
+            successCount++;
+          } catch (err) {
+            console.error(`Failed to create event for ${dateStr}:`, err);
+            failCount++;
+          }
+        }
+        
+        if (successCount > 0) {
+          alert(`成功建立 ${successCount} 個活動${failCount > 0 ? `，${failCount} 個失敗` : ''}`);
+          formModal.style.display = 'none';
+          selectedDates.clear();
+          renderCalendar();
+          loadEventsList();
+        } else {
+          alert('所有活動建立失敗，請檢查資料是否正確');
+        }
       } catch (err) {
         alert('儲存失敗：' + (err.message || '未知錯誤'));
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
       }
     });
     

@@ -105,51 +105,76 @@
     
     <!-- Event Form Modal -->
     <div id="event-form-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:24px;">
-      <div class="card" style="max-width:600px;width:100%;max-height:80vh;overflow-y:auto;">
+      <div class="card" style="max-width:900px;width:100%;max-height:90vh;overflow-y:auto;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
           <h2 id="event-form-title" style="margin:0;">新增活動</h2>
           <button id="close-event-form" class="btn ghost" style="padding:4px 8px;">✕</button>
         </div>
         <form id="event-form">
           <input type="hidden" name="id" id="event-id">
-          <label>
-            日期 <span style="color:#c00;">*</span>
-            <input type="date" name="event_date" id="event-date" required>
-          </label>
-          <label>
-            類型 <span style="color:#c00;">*</span>
-            <select name="event_type" id="event-type" required>
-              <option value="course">音樂課程</option>
-              <option value="performance">商業演出</option>
-              <option value="space">共享空間租借</option>
-            </select>
-          </label>
-          <label>
-            標題 <span style="color:#c00;">*</span>
-            <input type="text" name="title" id="event-title" required placeholder="例如：爵士鼓基礎課程">
-          </label>
-          <label>
-            開始時間
-            <input type="time" name="start_time" id="event-start-time">
-          </label>
-          <label>
-            結束時間
-            <input type="time" name="end_time" id="event-end-time">
-          </label>
-          <label>
-            最大參與人數
-            <input type="number" name="max_participants" id="event-max-participants" min="1">
-          </label>
-          <label>
-            描述
-            <textarea name="description" id="event-description" rows="4" placeholder="活動詳細說明..."></textarea>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;">
-            <input type="checkbox" name="is_active" id="event-is-active" checked>
-            <span>啟用</span>
-          </label>
-          <div style="display:flex;gap:8px;margin-top:16px;">
-            <button type="submit" class="btn">儲存</button>
+          
+          <!-- 活動資訊區塊 -->
+          <div style="margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid #e5e7eb;">
+            <h3 style="margin:0 0 16px 0;font-size:18px;">活動資訊</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <label>
+                類型 <span style="color:#c00;">*</span>
+                <select name="event_type" id="event-type" required>
+                  <option value="course">音樂課程</option>
+                  <option value="performance">商業演出</option>
+                  <option value="space">共享空間租借</option>
+                </select>
+              </label>
+              <label>
+                標題 <span style="color:#c00;">*</span>
+                <input type="text" name="title" id="event-title" required placeholder="例如：爵士鼓基礎課程">
+              </label>
+              <label>
+                開始時間
+                <input type="time" name="start_time" id="event-start-time">
+              </label>
+              <label>
+                結束時間
+                <input type="time" name="end_time" id="event-end-time">
+              </label>
+              <label>
+                最大參與人數
+                <input type="number" name="max_participants" id="event-max-participants" min="1">
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding-top:24px;">
+                <input type="checkbox" name="is_active" id="event-is-active" checked>
+                <span>啟用</span>
+              </label>
+            </div>
+            <label style="margin-top:16px;display:block;">
+              描述
+              <textarea name="description" id="event-description" rows="3" placeholder="活動詳細說明..."></textarea>
+            </label>
+          </div>
+          
+          <!-- 日期選擇區塊 -->
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <h3 style="margin:0;font-size:18px;">選擇日期 <span style="color:#c00;">*</span></h3>
+              <div style="display:flex;gap:8px;">
+                <button type="button" id="date-picker-prev-month" class="btn ghost sm">‹ 上個月</button>
+                <span id="date-picker-month" style="font-weight:600;min-width:150px;text-align:center;"></span>
+                <button type="button" id="date-picker-next-month" class="btn ghost sm">下個月 ›</button>
+              </div>
+            </div>
+            <div id="date-picker-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px;">
+              <!-- 日期選擇日曆將在這裡渲染 -->
+            </div>
+            <div id="selected-dates-list" style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px;min-height:40px;">
+              <div style="font-size:14px;color:#666;margin-bottom:8px;">已選擇的日期：</div>
+              <div id="selected-dates-tags" style="display:flex;flex-wrap:wrap;gap:8px;">
+                <span style="color:#999;font-size:14px;">尚未選擇日期</span>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display:flex;gap:8px;margin-top:24px;">
+            <button type="submit" class="btn" id="event-submit-btn">儲存活動</button>
             <button type="button" id="cancel-event-form" class="btn ghost">取消</button>
           </div>
         </form>
