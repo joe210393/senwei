@@ -412,6 +412,94 @@
               homeGrid.appendChild(node);
           }
       }
+      
+      // Load homepage booking calendar (view-only)
+      const homeCalendarEl = q('#home-calendar');
+      if (homeCalendarEl) {
+        try {
+          const currentDate = new Date();
+          const currentYear = currentDate.getFullYear();
+          const currentMonth = currentDate.getMonth();
+          
+          const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+          const firstDay = new Date(currentYear, currentMonth, 1);
+          const startDate = new Date(firstDay);
+          startDate.setDate(startDate.getDate() - startDate.getDay());
+          
+          homeCalendarEl.innerHTML = '';
+          
+          // Day headers
+          dayNames.forEach(day => {
+            const header = document.createElement('div');
+            header.style.textAlign = 'center';
+            header.style.fontWeight = '600';
+            header.style.padding = '8px';
+            header.style.fontSize = '14px';
+            header.style.color = '#666';
+            header.style.background = '#f9fafb';
+            header.style.borderRadius = '4px';
+            header.textContent = day;
+            homeCalendarEl.appendChild(header);
+          });
+          
+          // Load events for current month
+          const events = await fetchJson(`/api/public/events?year=${currentYear}&month=${currentMonth + 1}`);
+          const eventsByDate = {};
+          if (Array.isArray(events)) {
+            events.forEach(e => {
+              if (!eventsByDate[e.event_date]) eventsByDate[e.event_date] = [];
+              eventsByDate[e.event_date].push(e);
+            });
+          }
+          
+          // Calendar days
+          const renderDate = new Date(startDate);
+          for (let i = 0; i < 42; i++) {
+            const dayEl = document.createElement('div');
+            const dateStr = `${renderDate.getFullYear()}-${String(renderDate.getMonth() + 1).padStart(2, '0')}-${String(renderDate.getDate()).padStart(2, '0')}`;
+            const isCurrentMonth = renderDate.getMonth() === currentMonth;
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const dayEvents = eventsByDate[dateStr] || [];
+            
+            dayEl.style.aspectRatio = '1';
+            dayEl.style.border = isToday ? '2px solid #111827' : '1px solid #e5e7eb';
+            dayEl.style.borderRadius = '8px';
+            dayEl.style.padding = '8px';
+            dayEl.style.transition = 'all 0.2s';
+            dayEl.style.background = isCurrentMonth ? '#fff' : '#f9fafb';
+            dayEl.style.color = isCurrentMonth ? '#111827' : '#999';
+            dayEl.style.opacity = isCurrentMonth ? '1' : '0.3';
+            dayEl.style.fontWeight = isToday ? '700' : '500';
+            dayEl.style.fontSize = '14px';
+            dayEl.style.display = 'flex';
+            dayEl.style.flexDirection = 'column';
+            dayEl.style.alignItems = 'center';
+            dayEl.style.justifyContent = 'flex-start';
+            dayEl.style.minHeight = '80px';
+            dayEl.style.cursor = 'default';
+            
+            dayEl.innerHTML = `
+              <div style="font-size:14px;margin-bottom:4px;">${renderDate.getDate()}</div>
+              <div style="display:flex;flex-direction:column;gap:2px;width:100%;align-items:center;">
+                ${dayEvents.slice(0, 2).map(e => {
+                  const colors = { course: '#4A90E2', performance: '#E94B3C', space: '#7B68EE' };
+                  return `<div style="display:flex;align-items:center;gap:2px;width:100%;justify-content:center;">
+                    <span style="width:6px;height:6px;border-radius:50%;background:${colors[e.event_type] || '#999'};display:inline-block;"></span>
+                    <span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60px;">${e.title || ''}</span>
+                  </div>`;
+                }).join('')}
+                ${dayEvents.length > 2 ? `<div style="font-size:10px;color:#666;">+${dayEvents.length - 2}</div>` : ''}
+              </div>
+            `;
+            
+            homeCalendarEl.appendChild(dayEl);
+            renderDate.setDate(renderDate.getDate() + 1);
+          }
+        } catch (err) {
+          console.error('Error loading home calendar:', err);
+          homeCalendarEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#999;">載入行事曆失敗</div>';
+        }
+      }
 
       applyBackgroundFromSettings('home', settings);
     } else if (page === 'media-records') {
