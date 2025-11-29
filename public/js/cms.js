@@ -571,7 +571,8 @@
                             // Embed URL with origin parameter for API compliance
                             const embedUrl = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`;
                             // Add referrerpolicy to ensure Referer header is sent (required by YouTube API)
-                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;min-height:270px;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;min-width:480px;min-height:270px;" loading="lazy"></iframe></div>`;
+                            // Remove min-width/min-height from iframe to allow full responsive behavior
+                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;width:100%;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
                         }
                     }
                 }
