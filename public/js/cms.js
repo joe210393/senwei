@@ -432,9 +432,13 @@
                             vid = vid.split('&')[0].split('#')[0].split('?')[0].trim();
                             // Validate video ID format (YouTube video IDs are 11 characters)
                             if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
-                                // Simple embed URL - removed origin parameter to avoid error 153
-                                const embedUrl = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1`;
-                                return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:8px;margin-bottom:16px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
+                                // Get origin for YouTube API compliance (as per Required Minimum Functionality)
+                                const origin = window.location.origin || window.location.protocol + '//' + window.location.host;
+                                // Embed URL with origin parameter for API compliance
+                                // rel=0: don't show related videos, modestbranding=1: reduce YouTube branding
+                                const embedUrl = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`;
+                                // Add referrerpolicy to ensure Referer header is sent (required by YouTube API)
+                                return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;min-height:270px;background:#000;border-radius:8px;margin-bottom:16px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;min-width:480px;min-height:270px;" loading="lazy"></iframe></div>`;
                             } else {
                                 console.warn('[Frontend] Invalid YouTube video ID format:', vid);
                             }
@@ -562,9 +566,12 @@
                         vid = vid.split('&')[0].split('#')[0].trim();
                         // Validate video ID format
                         if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
-                            // Simple embed URL without origin parameter to avoid error 153
-                            const embedUrl = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1`;
-                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
+                            // Get origin for YouTube API compliance
+                            const origin = window.location.origin || window.location.protocol + '//' + window.location.host;
+                            // Embed URL with origin parameter for API compliance
+                            const embedUrl = `https://www.youtube.com/embed/${vid}?rel=0&modestbranding=1&origin=${encodeURIComponent(origin)}`;
+                            // Add referrerpolicy to ensure Referer header is sent (required by YouTube API)
+                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;min-height:270px;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="position:absolute;top:0;left:0;width:100%;height:100%;min-width:480px;min-height:270px;" loading="lazy"></iframe></div>`;
                         }
                     }
                 }
