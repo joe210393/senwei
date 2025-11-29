@@ -1363,9 +1363,16 @@
         try {
           btn.disabled = true;
           btn.textContent = '報名中...';
+          
+          // Get CSRF token
+          const { csrfToken } = await fetchJson('/api/public/csrf');
+          
           const res = await fetch(`/api/public/events/${eventId}/register`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'CSRF-Token': csrfToken
+            },
             credentials: 'same-origin'
           });
           const data = await res.json();
