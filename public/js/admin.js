@@ -417,9 +417,16 @@
       // Explicitly set is_published from checkbox
       const pubFlag = document.getElementById('mrecords-published-flag');
       data.is_published = (pubFlag && pubFlag.checked) ? 1 : 0;
+      console.log('[Media Records Save] is_published checkbox checked:', pubFlag?.checked, 'sending value:', data.is_published);
       const id=data.id; delete data.id;
-      if (id) await api('PUT', `/api/admin/media-records/${id}`, data); else await api('POST', '/api/admin/media-records', data);
-      location.reload();
+      try {
+        if (id) await api('PUT', `/api/admin/media-records/${id}`, data); else await api('POST', '/api/admin/media-records', data);
+        alert('儲存成功！');
+        location.reload();
+      } catch (err) {
+        console.error('Save error:', err);
+        alert('儲存失敗：' + (err.message || '未知錯誤'));
+      }
     });
   }
 

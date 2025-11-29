@@ -120,7 +120,7 @@ apiPublicRouter.get('/media-records', async (req, res) => {
   const page = Math.max(1, Number(req.query.page || 1));
   const limit = Math.min(50, Math.max(1, Number(req.query.limit || 10)));
   const offset = (page - 1) * limit;
-  const where = ['is_published = 1'];
+  const where = ['m.is_published = 1'];
   const params = [];
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.trunc(limit))) : 10;
@@ -128,10 +128,11 @@ apiPublicRouter.get('/media-records', async (req, res) => {
   const items = await query(
     `SELECT m.id, m.title, m.slug, m.published_at, m.excerpt, m.embed_url, md.file_path AS cover_url
      FROM media_records m LEFT JOIN media md ON md.id = m.cover_media_id
-     ${whereSql} ORDER BY m.published_at DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+     ${whereSql} ORDER BY COALESCE(m.published_at, m.id) DESC LIMIT ${safeLimit} OFFSET ${safeOffset}`,
     params
   );
   const [{ cnt }] = await query(`SELECT COUNT(1) AS cnt FROM media_records m ${whereSql}`, params);
+  console.log('[GET /media-records] Found', items.length, 'items, total:', cnt);
   res.json({ items, page, limit, total: cnt });
 });
 
