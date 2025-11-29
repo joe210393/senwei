@@ -135,15 +135,24 @@
     // Language switch
     const dict = {
       zh: {
-        home: '首頁', about: '關於', about_guchau: '關於鼓潮', about_music: '關於音樂課程', about_fund: '關於基金帳戶',
-        blog: '部落格', news: '最新消息', leaderboard: '師資說明', plans: '課程方案', contact: '聯絡我們', trial: '課程試讀', login: '登入'
+        home: '首頁', about: '關於', 
+        about_guchau: '關於鼓潮', about_story: '品牌故事', about_history: '鼓潮音樂歷程', about_music: '關於音樂課程',
+        services: '服務項目', service_courses: '音樂課程', service_commercial: '商業演出', service_sales: '樂器販售', service_space: '共享與藝術空間', service_tourism: '音樂觀光體驗',
+        media_records: '影像紀錄',
+        blog: '部落格', news: '相關報導', leaderboard: '師資說明', plans: '課程方案', contact: '聯絡我們', trial: '課程試讀', login: '登入'
       },
       en: {
-        home: 'Home', about: 'About', about_guchau: 'About Guchau', about_music: 'About Music Courses', about_fund: 'About Funded Account',
+        home: 'Home', about: 'About', 
+        about_guchau: 'About Guchau', about_story: 'Brand Story', about_history: 'Music History', about_music: 'About Music Courses',
+        services: 'Services', service_courses: 'Music Courses', service_commercial: 'Commercial Performance', service_sales: 'Instrument Sales', service_space: 'Shared & Art Space', service_tourism: 'Music Tourism',
+        media_records: 'Video Records',
         blog: 'Blog', news: 'News', leaderboard: 'Instructors', plans: 'Plans', contact: 'Contact', trial: 'Trial', login: 'Login'
       },
       ja: {
-        home: 'ホーム', about: '紹介', about_guchau: '鼓潮について', about_music: '音楽コースについて', about_fund: 'ファンド口座について',
+        home: 'ホーム', about: '紹介', 
+        about_guchau: '鼓潮について', about_story: 'ブランドストーリー', about_history: '音楽の歴史', about_music: '音楽コースについて',
+        services: 'サービス', service_courses: '音楽コース', service_commercial: '商業公演', service_sales: '楽器販売', service_space: '共有＆アートスペース', service_tourism: '音楽観光体験',
+        media_records: '映像記録',
         blog: 'ブログ', news: 'ニュース', leaderboard: '講師紹介', plans: 'プラン', contact: 'お問い合わせ', trial: '体験講座', login: 'ログイン'
       }
     };
@@ -226,7 +235,25 @@
     await renderHeaderFooter();
     const settings = await loadSettings();
     const page = document.body.dataset.page;
-    if (page === 'home') {
+    
+    // Generic page handler for new pages
+    const contentPages = [
+        'about-guchau', 'about-story', 'about-history', 'about-music',
+        'service-courses', 'service-commercial', 'service-sales', 'service-space', 'service-tourism',
+        'media-records'
+    ];
+    
+    if (contentPages.includes(page)) {
+        try {
+            const pageData = await fetchJson(`/api/public/pages/${page}`);
+            // Try different selectors for content area
+            const cont = q('#content') || q('#aboutus-content') || q('#teacher-content'); 
+            if (cont) cont.innerHTML = pageData.content_html || '';
+            setBackground(pageData.background_image_url || null, settings.default_bg_color);
+        } catch { 
+            applyBackgroundFromSettings('about', settings); 
+        }
+    } else if (page === 'home') {
       // Load slides
       try {
         const slides = await fetchJson('/api/public/slides');
@@ -567,24 +594,8 @@
         if (res.ok) form.reset();
       });
       applyBackgroundFromSettings('contact', settings);
-    } else if (page === 'about-music') {
-      try {
-        const pageData = await fetchJson('/api/public/pages/about-music');
-        const img = q('#teacher-photo');
-        if (img && pageData.background_image_url) img.src = pageData.background_image_url;
-        const cont = q('#teacher-content'); if (cont) cont.innerHTML = pageData.content_html || '';
-        setBackground(pageData.background_image_url || null, settings.default_bg_color);
-      } catch { applyBackgroundFromSettings('about', settings); }
-    } else if (page === 'about-guchau') {
-      try {
-        const pageData = await fetchJson('/api/public/pages/about-guchau');
-        const cont = q('#aboutus-content'); if (cont) cont.innerHTML = pageData.content_html || '';
-        setBackground(pageData.background_image_url || null, settings.default_bg_color);
-      } catch { applyBackgroundFromSettings('about', settings); }
     }
   }
 
   window.addEventListener('DOMContentLoaded', init);
 })();
-
-

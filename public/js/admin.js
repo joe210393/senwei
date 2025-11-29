@@ -239,6 +239,127 @@
     });
   }
 
+  // Shared Logic for Page Editors
+  let sharedPickerTarget = null;
+  async function loadSharedMedia(page=1, gridId, pagerId, onPick){
+      const data = await api('GET', `/api/admin/media?page=${page}&limit=24`);
+      const grid = document.getElementById(gridId);
+      const pager = document.getElementById(pagerId);
+      grid.innerHTML = '';
+      data.items.forEach(it => {
+        const btn = document.createElement('button');
+        btn.className = 'btn ghost';
+        btn.style.display = 'block'; btn.style.padding = '0'; btn.style.borderRadius = '12px'; btn.style.overflow = 'hidden'; btn.style.border = '1px solid #e5e7eb'; btn.style.background = '#fff';
+        btn.innerHTML = `<img src="${it.file_path}" alt="" style="width:100%;height:120px;object-fit:cover"><div style="padding:8px 10px;font-size:12px;color:#374151;">${it.file_name}</div>`;
+        btn.addEventListener('click', () => { 
+            if (sharedPickerTarget) document.getElementById(sharedPickerTarget).value = it.id || ''; 
+            onPick();
+        });
+        grid.appendChild(btn);
+      });
+      pager.innerHTML = '';
+      const totalPages = Math.ceil(data.total / data.limit);
+      for (let i=1;i<=totalPages;i++){
+        const a=document.createElement('a'); a.href='#'; a.textContent=i; a.className='btn ghost'; a.style.padding='6px 10px'; a.style.borderRadius='8px'; if (i===data.page){ a.style.background='#111827'; a.style.color='#fff'; }
+        a.addEventListener('click',(e)=>{e.preventDefault(); loadSharedMedia(i, gridId, pagerId, onPick);});
+        pager.appendChild(a);
+      }
+  }
+
+  async function setupPageEditor(prefix, slug, title) {
+      // Toolbar binding
+      const toolbar = document.querySelector(`#${prefix}-editor`)?.previousElementSibling;
+      if (toolbar) {
+           toolbar.addEventListener('click', (e) => {
+              const btn = e.target.closest('[data-cmd]'); if (!btn) return;
+              const cmd = btn.getAttribute('data-cmd'); const value = btn.getAttribute('data-value') || null;
+              document.execCommand(cmd, false, value);
+            });
+      }
+
+      // Insert Image
+      async function uploadAndInsert(file, editorEl) {
+          const csrf = await getCsrf();
+          const fd = new FormData(); fd.append('file', file);
+          const res = await fetch('/api/admin/media/upload', { method:'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
+          const j = await res.json();
+          if (j?.path) { const img = document.createElement('img'); img.src = j.path; img.alt = ''; editorEl.appendChild(img); }
+      }
+      document.getElementById(`${prefix}-insert-img`)?.addEventListener('click', () => document.getElementById(`${prefix}-file`).click());
+      document.getElementById(`${prefix}-file`)?.addEventListener('change', (e) => e.target.files[0] && uploadAndInsert(e.target.files[0], document.getElementById(`${prefix}-editor`)));
+
+      // BG Picker & Upload
+      const picker = document.getElementById('about-picker'); // Assuming reusing 'about-picker' ID in generic way or similar
+      if (picker) {
+          document.getElementById(`${prefix}-bg-pick`)?.addEventListener('click', () => { 
+              sharedPickerTarget = `${prefix}-bg`; 
+              picker.style.display='block'; 
+              loadSharedMedia(1, 'about-picker-grid', 'about-picker-pager', () => { picker.style.display='none'; });
+          });
+          document.getElementById(`${prefix}-bg-upload`)?.addEventListener('click', () => document.getElementById(`${prefix}-bg-file`).click());
+          document.getElementById(`${prefix}-bg-file`)?.addEventListener('change', async (e) => {
+              if (!e.target.files[0]) return;
+              const csrf = await getCsrf();
+              const fd = new FormData(); fd.append('file', e.target.files[0]);
+              const res = await fetch('/api/admin/media/upload', { method:'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
+              const j = await res.json();
+              if (j?.media_id) document.getElementById(`${prefix}-bg`).value = j.media_id;
+          });
+      }
+
+      // Load Data
+      try {
+           const data = await api('GET', `/api/admin/pages/${slug}`);
+           if (data) {
+               const editor = document.getElementById(`${prefix}-editor`);
+               const bg = document.getElementById(`${prefix}-bg`);
+               if (editor) editor.innerHTML = data.content_html || '';
+               if (bg) bg.value = data.background_image_id || '';
+           }
+      } catch {}
+      
+      // Save
+      document.getElementById(`${prefix}-save`)?.addEventListener('click', async () => {
+           await api('POST', '/api/admin/pages', { 
+               slug: slug, 
+               title: title, 
+               content_html: document.getElementById(`${prefix}-editor`).innerHTML, 
+               background_image_id: document.getElementById(`${prefix}-bg`).value || null, 
+               is_published: 1 
+           });
+           alert(`已儲存：${title}`);
+      });
+  }
+
+  async function initAboutEditors() {
+      await setupPageEditor('guchau', 'about-guchau', '關於鼓潮');
+      await setupPageEditor('story', 'about-story', '品牌故事');
+      await setupPageEditor('history', 'about-history', '鼓潮音樂歷程');
+      
+      // Common picker close
+      document.getElementById('about-picker-close')?.addEventListener('click', (e)=>{e.preventDefault(); document.getElementById('about-picker').style.display='none';});
+  }
+
+  async function initServicesEditors() {
+      await setupPageEditor('scourses', 'service-courses', '音樂課程');
+      await setupPageEditor('scommercial', 'service-commercial', '商業演出');
+      await setupPageEditor('ssales', 'service-sales', '樂器販售');
+      await setupPageEditor('sspace', 'service-space', '共享與藝術空間');
+      await setupPageEditor('stourism', 'service-tourism', '音樂觀光體驗');
+      
+      document.getElementById('about-picker-close')?.addEventListener('click', (e)=>{e.preventDefault(); document.getElementById('about-picker').style.display='none';});
+  }
+
+  async function initMediaRecordsEditor() {
+      await setupPageEditor('mrecords', 'media-records', '影像紀錄');
+      document.getElementById('about-picker-close')?.addEventListener('click', (e)=>{e.preventDefault(); document.getElementById('about-picker').style.display='none';});
+  }
+
+
+  // [Rest of existing functions: initMenus, initLogin, initChangePassword, initSlides, initUsers, initMembers, initContacts, initTrial, initNewsEditor, initLegendEditor, initPlansEditor, initCoursesMaterials, initMedia]
+  // I will keep the rest of functions as they were, just replaced initAboutEditors and added new ones.
+  
+  // ... (Copying previous functions back in to ensure file is complete)
   // MENUS with drag reorder
   function renderMenusList(listEl, menus) {
     listEl.innerHTML = '';
@@ -362,7 +483,7 @@
     });
   }
 
-  // TRIAL (課程試讀)
+  // TRIAL
   async function initTrial() {
     const table = document.getElementById('trial-table');
     const form = document.getElementById('trial-form');
@@ -431,6 +552,7 @@
     tbody.addEventListener('click', async (e)=>{ const id = e.target.dataset.edit || e.target.dataset.del; if (!id) return; if (e.target.dataset.edit){ const r=rows.find(x=> String(x.id)===String(id)); if (!r) return; document.getElementById('news-title').value=r.title||''; document.getElementById('news-slug').value=r.slug||''; document.getElementById('news-excerpt').value=r.excerpt||''; editor.innerHTML=r.content_html||''; document.getElementById('news-cover').value=r.cover_media_id||''; document.getElementById('news-published').value=r.published_at||''; document.getElementById('news-published-flag').checked=!!r.is_published; form.querySelector('[name="id"]').value=r.id; } else if (e.target.dataset.del){ if (!confirm('確定刪除？')) return; await api('DELETE', `/api/admin/news/${id}`); location.reload(); } });
     form.addEventListener('submit', async (e)=>{ e.preventDefault(); const fd=new FormData(form); const data=Object.fromEntries(fd.entries()); data.excerpt=document.getElementById('news-excerpt').value; data.content_html=editor.innerHTML; data.cover_media_id=document.getElementById('news-cover').value||null; data.published_at=document.getElementById('news-published').value||null; data.is_published=document.getElementById('news-published-flag').checked?1:0; const id=data.id; delete data.id; if (id) await api('PUT', `/api/admin/news/${id}`, data); else await api('POST', '/api/admin/news', data); location.reload(); });
   }
+
   // MEDIA
   async function initMedia() {
     const file = document.getElementById('file');
@@ -1047,12 +1169,16 @@
     if (page === 'change-password.html') await initChangePassword();
     if (page === 'index.html') await initSlides();
     if (page === 'courses.html' || page === 'materials.html') await initCoursesMaterials();
+    
+    // Updated initializers
     if (page === 'about.html') await initAboutEditors();
+    if (page === 'services.html') await initServicesEditors();
+    if (page === 'media-records.html') await initMediaRecordsEditor();
   }
 
   window.addEventListener('DOMContentLoaded', init);
 
-  // POSTS rich editor
+  // POSTS rich editor (kept as is)
   async function initPostsEditor() {
     const table = document.getElementById('posts-table');
     const form = document.getElementById('posts-form');
@@ -1117,7 +1243,6 @@
         form.querySelector('[name="name"]').value = r.name || '';
         form.querySelector('[name="price"]').value = r.price || '';
         form.querySelector('[name="tagline"]').value = r.tagline || '';
-        // features removed
         form.querySelector('[name="is_active"]').checked = !!r.is_active;
         document.getElementById('plan-slug').value = r.slug || '';
         editor.innerHTML = r.content_html || '';
@@ -1135,7 +1260,6 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form); const data = Object.fromEntries(fd.entries());
-      // features removed
       data.slug = document.getElementById('plan-slug').value;
       data.content_html = editor.innerHTML;
       data.cover_media_id = document.getElementById('plan-cover').value || null;
@@ -1147,93 +1271,4 @@
       location.reload();
     });
   }
-  async function initAboutEditors() {
-    function bindToolbar(scope) {
-      scope.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-cmd]'); if (!btn) return;
-        const cmd = btn.getAttribute('data-cmd'); const value = btn.getAttribute('data-value') || null;
-        document.execCommand(cmd, false, value);
-      });
-    }
-    try {
-      const data = await api('GET', '/api/admin/about');
-      if (data?.guchau) {
-        document.getElementById('aboutus-editor').innerHTML = data.guchau.content_html || '';
-        document.getElementById('aboutus-bg').value = data.guchau.background_image_id || '';
-      }
-      if (data?.music) {
-        document.getElementById('coop-editor').innerHTML = data.music.content_html || '';
-        document.getElementById('coop-bg').value = data.music.background_image_id || '';
-      }
-    } catch {}
-
-    async function uploadAndInsert(file, editorEl) {
-      const csrf = await getCsrf();
-      const fd = new FormData(); fd.append('file', file);
-      const res = await fetch('/api/admin/media/upload', { method:'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
-      const j = await res.json();
-      if (j?.path) { const img = document.createElement('img'); img.src = j.path; img.alt = ''; editorEl.appendChild(img); }
-    }
-
-    const aToolbar = document.querySelector('#aboutus-editor')?.previousElementSibling;
-    const cToolbar = document.querySelector('#coop-editor')?.previousElementSibling;
-    aToolbar && bindToolbar(aToolbar); cToolbar && bindToolbar(cToolbar);
-
-    document.getElementById('aboutus-insert-img')?.addEventListener('click', () => document.getElementById('aboutus-file').click());
-    document.getElementById('coop-insert-img')?.addEventListener('click', () => document.getElementById('coop-file').click());
-    document.getElementById('aboutus-file')?.addEventListener('change', (e) => e.target.files[0] && uploadAndInsert(e.target.files[0], document.getElementById('aboutus-editor')));
-    document.getElementById('coop-file')?.addEventListener('change', (e) => e.target.files[0] && uploadAndInsert(e.target.files[0], document.getElementById('coop-editor')));
-
-    // BG pickers
-    const picker = document.getElementById('about-picker');
-    const pickerGrid = document.getElementById('about-picker-grid');
-    const pickerPager = document.getElementById('about-picker-pager');
-    let pickerTarget = null;
-    async function loadAboutMedia(page=1){
-      const data = await api('GET', `/api/admin/media?page=${page}&limit=24`);
-      pickerGrid.innerHTML = '';
-      data.items.forEach(it => {
-        const btn = document.createElement('button');
-        btn.className = 'btn ghost';
-        btn.style.display = 'block'; btn.style.padding = '0'; btn.style.borderRadius = '12px'; btn.style.overflow = 'hidden'; btn.style.border = '1px solid #e5e7eb'; btn.style.background = '#fff';
-        btn.innerHTML = `<img src="${it.file_path}" alt="" style="width:100%;height:120px;object-fit:cover"><div style="padding:8px 10px;font-size:12px;color:#374151;">${it.file_name}</div>`;
-        btn.addEventListener('click', () => { if (pickerTarget) document.getElementById(pickerTarget).value = it.id || ''; picker.style.display='none'; });
-        pickerGrid.appendChild(btn);
-      });
-      pickerPager.innerHTML = '';
-      const totalPages = Math.ceil(data.total / data.limit);
-      for (let i=1;i<=totalPages;i++){
-        const a=document.createElement('a'); a.href='#'; a.textContent=i; a.className='btn ghost'; a.style.padding='6px 10px'; a.style.borderRadius='8px'; if (i===data.page){ a.style.background='#111827'; a.style.color='#fff'; }
-        a.addEventListener('click',(e)=>{e.preventDefault(); loadAboutMedia(i);});
-        pickerPager.appendChild(a);
-      }
-    }
-    document.getElementById('about-picker-close')?.addEventListener('click', (e)=>{e.preventDefault(); picker.style.display='none';});
-    function pickBg(targetInputId){ pickerTarget = targetInputId; picker.style.display='block'; loadAboutMedia(1); }
-    document.getElementById('aboutus-bg-pick')?.addEventListener('click', () => pickBg('aboutus-bg'));
-    document.getElementById('coop-bg-pick')?.addEventListener('click', () => pickBg('coop-bg'));
-
-    async function uploadBg(file, targetInputId) {
-      const csrf = await getCsrf();
-      const fd = new FormData(); fd.append('file', file);
-      const res = await fetch('/api/admin/media/upload', { method:'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
-      const j = await res.json();
-      if (j?.media_id) document.getElementById(targetInputId).value = j.media_id;
-    }
-    document.getElementById('aboutus-bg-upload')?.addEventListener('click', () => document.getElementById('aboutus-bg-file').click());
-    document.getElementById('coop-bg-upload')?.addEventListener('click', () => document.getElementById('coop-bg-file').click());
-    document.getElementById('aboutus-bg-file')?.addEventListener('change', (e) => e.target.files[0] && uploadBg(e.target.files[0], 'aboutus-bg'));
-    document.getElementById('coop-bg-file')?.addEventListener('change', (e) => e.target.files[0] && uploadBg(e.target.files[0], 'coop-bg'));
-
-    document.getElementById('aboutus-save')?.addEventListener('click', async () => {
-      await api('POST', '/api/admin/pages', { slug: 'about-guchau', title: '關於鼓潮', content_html: document.getElementById('aboutus-editor').innerHTML, background_image_id: document.getElementById('aboutus-bg').value || null, is_published: 1 });
-      alert('已儲存：關於鼓潮');
-    });
-    document.getElementById('coop-save')?.addEventListener('click', async () => {
-      await api('POST', '/api/admin/pages', { slug: 'about-music', title: '關於音樂課程', content_html: document.getElementById('coop-editor').innerHTML, background_image_id: document.getElementById('coop-bg').value || null, is_published: 1 });
-      alert('已儲存：關於音樂課程');
-    });
-  }
 })();
-
-

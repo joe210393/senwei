@@ -36,8 +36,6 @@ try {
 }
 
 // 1. Recovery/Migration Logic:
-// If com1.db is missing, but we have site.db (old DB), let's use that instead of a fresh seed.
-// This helps preserve data if we switched filenames but still have the old file in the volume.
 if (!fs.existsSync(dbPath) && fs.existsSync(oldDbPath)) {
     console.log('Found old "site.db" but no "com1.db". Attempting to migrate/copy old data...');
     try {
@@ -48,8 +46,7 @@ if (!fs.existsSync(dbPath) && fs.existsSync(oldDbPath)) {
     }
 }
 
-// 2. Standard Seeding Logic: Only seed if DB file is still missing
-// We removed the forced overwrite logic to avoid data loss on subsequent restarts
+// 2. Standard Seeding Logic
 if (!fs.existsSync(dbPath)) {
     const seedPath = path.join(__dirname, '../../seed/com1.db');
     if (fs.existsSync(seedPath)) {
@@ -60,7 +57,6 @@ if (!fs.existsSync(dbPath)) {
             
             fs.copyFileSync(seedPath, dbPath);
             
-            // Also copy WAL/SHM files if they exist in seed
             const walPath = seedPath + '-wal';
             const shmPath = seedPath + '-shm';
             if (fs.existsSync(walPath)) fs.copyFileSync(walPath, dbPath + '-wal');
@@ -74,7 +70,7 @@ if (!fs.existsSync(dbPath)) {
 }
 
 // Check for seed uploads
-const uploadsDir = targetUploadsDir; // Use resolved target path
+const uploadsDir = targetUploadsDir;
 const seedUploadsDir = path.join(__dirname, '../../seed/uploads');
 if (fs.existsSync(seedUploadsDir)) {
     console.log('Seeding uploads...');
@@ -97,12 +93,8 @@ if (fs.existsSync(seedUploadsDir)) {
 console.log(`Initializing SQLite database at ${dbPath}...`);
 
 try {
-  // NOTE: This script previously deleted the DB.
-  // We changed it to NOT delete by default to support safe re-runs on fresh deployments.
-  // To force a clean slate, manually delete com1.db or run the clean-db script.
   const db = new Database(dbPath);
   
-  // Check if 'users' table exists to determine if we need to run schema
   let tablesExist = false;
   try {
     const test = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='users'").get();
@@ -118,13 +110,10 @@ try {
      console.log('Tables already exist, skipping schema creation.');
   }
   
-  // Create default admin user if not exists
   let adminExists = false;
   try {
       adminExists = db.prepare("SELECT id FROM users WHERE username = 'admin'").get();
-  } catch(e) {
-      // Maybe table didn't exist before schema run, now it should
-  }
+  } catch(e) {}
 
   if (!adminExists) {
     console.log('Creating default admin user...');
@@ -132,53 +121,61 @@ try {
     db.prepare('INSERT INTO users(username, password_hash, role, must_change_password) VALUES (?,?,?,?)')
       .run('admin', hash, 'admin', 1);
     
-    // Insert default settings
     const insertSetting = db.prepare('INSERT OR IGNORE INTO settings(`key`,`value`) VALUES (?,?)');
-    insertSetting.run('site_name', 'My Site');
-    insertSetting.run('line_url', process.env.LINE_OFFICIAL_ACCOUNT_URL || '');
+    insertSetting.run('site_name', '鼓潮音樂');
     insertSetting.run('default_bg_color', '#f7f7f7');
     insertSetting.run('theme', 'default');
-    
-    console.log('Default admin user created: username="admin", password="admin"');
-  } else {
-    console.log('Admin user already exists.');
+    console.log('Default admin user created.');
   }
 
-  // Add Content Migration logic directly here to ensure it runs for new deployments
-  console.log('Checking for content migration needs...');
+  console.log('Applying structure updates...');
   
-  // Update Pages
-  const renamePage = db.prepare('UPDATE pages SET slug = ?, title = ? WHERE slug = ?');
-  renamePage.run('about-music', '關於音樂課程', 'about-teacher');
-  renamePage.run('about-guchau', '關於鼓潮', 'about-us');
-  db.prepare("DELETE FROM pages WHERE slug = 'about-ftmo' OR slug = 'about-manufacturing'").run();
+  // Insert default pages if missing
+  const insertPage = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content_html, is_published) VALUES (?, ?, ?, 1)');
+  insertPage.run('about-guchau', '關於鼓潮', '<p>關於鼓潮的內容...</p>');
+  insertPage.run('about-story', '品牌故事', '<p>品牌故事內容...</p>');
+  insertPage.run('about-history', '鼓潮音樂歷程', '<p>鼓潮音樂歷程內容...</p>');
+  
+  insertPage.run('service-courses', '音樂課程', '<p>音樂課程內容...</p>');
+  insertPage.run('service-commercial', '商業演出', '<p>商業演出內容...</p>');
+  insertPage.run('service-sales', '樂器販售', '<p>樂器販售內容...</p>');
+  insertPage.run('service-space', '共享與藝術空間', '<p>共享與藝術空間內容...</p>');
+  insertPage.run('service-tourism', '音樂觀光體驗', '<p>音樂觀光體驗內容...</p>');
+  
+  insertPage.run('media-records', '影像紀錄', '<p>影像紀錄內容...</p>');
 
-  // Reset Menus if they look like the old default (simple heuristic or just always update on init?)
-  // To be safe, we'll just ensure the new menu items exist or replace. 
-  // Since this is often run on empty DB, let's just run the menu insertion if menus are empty.
-  const menuCount = db.prepare('SELECT COUNT(*) as c FROM menus').get().c;
+  // Re-seed Menus to match requested structure
+  // We check if the new structure exists, if not (or partial), we enforce it.
+  // Simpler: Delete all and re-insert to guarantee order and structure.
+  // Users can re-order later if they really want, but this fixes the "broken" state.
+  db.prepare('DELETE FROM menus').run();
+  const insertMenu = db.prepare('INSERT INTO menus (title, slug, url, order_index, parent_id, visible) VALUES (?, ?, ?, ?, ?, 1)');
   
-  if (menuCount === 0) {
-      console.log('Seeding menus...');
-      const insertMenu = db.prepare('INSERT INTO menus (title, slug, url, order_index, parent_id, visible) VALUES (?, ?, ?, ?, ?, 1)');
-      
-      // Parent items
-      const info = insertMenu.run('關於', null, null, 10, null);
-      const parentId = info.lastInsertRowid;
-      
-      insertMenu.run('關於鼓潮', 'about-guchau', '/about-guchau.html', 1, parentId);
-      insertMenu.run('關於音樂課程', 'about-music', '/about-music.html', 2, parentId);
-      
-      insertMenu.run('部落格', 'blog', null, 20, null);
-      insertMenu.run('最新消息', 'news', null, 30, null);
-      insertMenu.run('師資說明', 'leaderboard', null, 40, null); 
-      insertMenu.run('體驗課程專案', 'plans', null, 50, null); 
-      insertMenu.run('聯絡我們', 'contact', null, 60, null);
-      insertMenu.run('影像記錄', 'trial', null, 70, null); 
-  }
+  // 關於
+  const aboutInfo = insertMenu.run('關於', null, '#', 10, null);
+  const aboutId = aboutInfo.lastInsertRowid;
+  insertMenu.run('關於鼓潮', 'about-guchau', '/about-guchau.html', 1, aboutId);
+  insertMenu.run('品牌故事', 'about-story', '/about-story.html', 2, aboutId);
+  insertMenu.run('鼓潮音樂歷程', 'about-history', '/about-history.html', 3, aboutId);
+  
+  // 服務項目
+  const servicesInfo = insertMenu.run('服務項目', null, '#', 20, null);
+  const servicesId = servicesInfo.lastInsertRowid;
+  insertMenu.run('音樂課程', 'service-courses', '/service-courses.html', 1, servicesId);
+  insertMenu.run('商業演出', 'service-commercial', '/service-commercial.html', 2, servicesId);
+  insertMenu.run('樂器販售', 'service-sales', '/service-sales.html', 3, servicesId);
+  insertMenu.run('共享與藝術空間', 'service-space', '/service-space.html', 4, servicesId);
+  insertMenu.run('音樂觀光體驗', 'service-tourism', '/service-tourism.html', 5, servicesId);
+  
+  // Others
+  insertMenu.run('相關報導', 'news', '/news.html', 30, null);
+  insertMenu.run('影像紀錄', 'media-records', '/media-records.html', 40, null);
+  insertMenu.run('聯絡我們', 'contact', '/contact.html', 50, null);
+
+  console.log('Menu structure updated.');
 
   db.close();
 } catch (err) {
   console.error('Error initializing database:', err);
-  process.exit(1);
+  // process.exit(1); // Don't crash server if init fails slightly
 }

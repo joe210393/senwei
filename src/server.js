@@ -220,7 +220,7 @@ function startServer() {
     });
 
     // Serve known static html pages explicitly (single-file pages)
-    const pages = ['index.html','about.html','about-guchau.html','about-music.html','blog.html','blog-post.html','news.html','news-post.html','leaderboard.html','leader.html','plans.html','plan.html','contact.html','trial.html','login.html','register.html','user.html','admin/members.html'];
+    const pages = ['index.html','about.html','about-guchau.html','about-music.html','about-story.html','about-history.html','service-courses.html','service-commercial.html','service-sales.html','service-space.html','service-tourism.html','media-records.html','blog.html','blog-post.html','news.html','news-post.html','leaderboard.html','leader.html','plans.html','plan.html','contact.html','trial.html','login.html','register.html','user.html','admin/members.html'];
     pages.forEach(p => {
       app.get('/' + (p === 'index.html' ? '' : p), (_req, res) => res.sendFile(path.join(publicDir, p)));
     });
