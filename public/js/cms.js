@@ -1170,6 +1170,202 @@
       } catch (err) {
         console.error('[Frontend] Error loading product:', err);
       }
+    } else if (page === 'booking') {
+      // 預約報名系統（前台）
+      let currentDate = new Date();
+      let currentYear = currentDate.getFullYear();
+      let currentMonth = currentDate.getMonth();
+      
+      const calendarEl = q('#calendar');
+      const monthLabel = q('#current-month');
+      const prevBtn = q('#prev-month');
+      const nextBtn = q('#next-month');
+      const eventModal = q('#event-detail-modal');
+      const closeModalBtn = q('#close-event-modal');
+      const eventListEl = q('#event-list');
+      const eventDateLabel = q('#event-detail-date');
+      
+      if (!calendarEl) return;
+      
+      const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+      const typeNames = { course: '音樂課程', performance: '商業演出', space: '共享空間租借' };
+      const typeColors = { course: '#4A90E2', performance: '#E94B3C', space: '#7B68EE' };
+      
+      function renderCalendar() {
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const lastDay = new Date(currentYear, currentMonth + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+        
+        calendarEl.innerHTML = '';
+        
+        // Day headers
+        dayNames.forEach(day => {
+          const header = document.createElement('div');
+          header.className = 'calendar-day-header';
+          header.textContent = day;
+          calendarEl.appendChild(header);
+        });
+        
+        // Load events for this month
+        loadEventsForMonth().then(eventsByDate => {
+          const currentDate = new Date(startDate);
+          for (let i = 0; i < 42; i++) {
+            const dayEl = document.createElement('div');
+            const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+            const isCurrentMonth = currentDate.getMonth() === currentMonth;
+            const isToday = dateStr === new Date().toISOString().split('T')[0];
+            const dayEvents = eventsByDate[dateStr] || [];
+            
+            dayEl.className = 'calendar-day';
+            if (!isCurrentMonth) dayEl.classList.add('other-month');
+            if (isToday) dayEl.classList.add('today');
+            
+            dayEl.innerHTML = `
+              <div class="calendar-day-number">${currentDate.getDate()}</div>
+              <div class="calendar-day-events">
+                ${dayEvents.slice(0, 3).map(e => {
+                  return `<div style="display:flex;align-items:center;gap:2px;"><span class="event-dot ${e.event_type}"></span><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</span></div>`;
+                }).join('')}
+                ${dayEvents.length > 3 ? `<div style="font-size:10px;color:#666;">+${dayEvents.length - 3} 更多</div>` : ''}
+              </div>
+            `;
+            
+            if (isCurrentMonth && dayEvents.length > 0) {
+              dayEl.addEventListener('click', () => showEventDetail(dateStr, dayEvents));
+            }
+            
+            calendarEl.appendChild(dayEl);
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        });
+        
+        if (monthLabel) {
+          monthLabel.textContent = `${currentYear}年 ${currentMonth + 1}月`;
+        }
+      }
+      
+      async function loadEventsForMonth() {
+        try {
+          const events = await fetchJson(`/api/public/events?year=${currentYear}&month=${currentMonth + 1}`);
+          const eventsByDate = {};
+          events.forEach(e => {
+            if (!eventsByDate[e.event_date]) eventsByDate[e.event_date] = [];
+            eventsByDate[e.event_date].push(e);
+          });
+          return eventsByDate;
+        } catch (err) {
+          console.error('[Frontend] Error loading events:', err);
+          return {};
+        }
+      }
+      
+      function showEventDetail(dateStr, events) {
+        if (!eventModal || !eventListEl || !eventDateLabel) return;
+        
+        const date = new Date(dateStr);
+        eventDateLabel.textContent = `${date.getFullYear()}年 ${date.getMonth() + 1}月 ${date.getDate()}日`;
+        eventListEl.innerHTML = '';
+        
+        events.forEach(event => {
+          const item = document.createElement('div');
+          item.className = 'event-item';
+          item.innerHTML = `
+            <div class="event-item-header">
+              <div>
+                <span class="event-type-badge ${event.event_type}">${typeNames[event.event_type] || event.event_type}</span>
+                <h3 style="margin:8px 0 4px 0;font-size:18px;">${event.title}</h3>
+              </div>
+            </div>
+            ${event.start_time || event.end_time ? `<div class="event-time">時間：${event.start_time || ''} ${event.end_time ? '-' + event.end_time : ''}</div>` : ''}
+            ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
+            ${event.max_participants ? `<div style="margin-top:8px;color:#666;font-size:14px;">最多 ${event.max_participants} 人</div>` : ''}
+            <button class="btn interested-btn" data-event-id="${event.id}" data-event-title="${event.title}">有興趣參加</button>
+          `;
+          eventListEl.appendChild(item);
+        });
+        
+        eventModal.classList.add('open');
+      }
+      
+      prevBtn?.addEventListener('click', () => {
+        currentMonth--;
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear--;
+        }
+        renderCalendar();
+      });
+      
+      nextBtn?.addEventListener('click', () => {
+        currentMonth++;
+        if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear++;
+        }
+        renderCalendar();
+      });
+      
+      closeModalBtn?.addEventListener('click', () => {
+        eventModal.classList.remove('open');
+      });
+      
+      eventModal?.addEventListener('click', (e) => {
+        if (e.target === eventModal) {
+          eventModal.classList.remove('open');
+        }
+      });
+      
+      // Handle "有興趣參加" button clicks
+      eventListEl?.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.interested-btn');
+        if (!btn) return;
+        
+        const eventId = btn.dataset.eventId;
+        const eventTitle = btn.dataset.eventTitle;
+        
+        // Check if user is logged in
+        try {
+          const me = await fetchJson('/api/public/members/me');
+          if (!me || !me.id) {
+            alert('請先登入會員才能報名活動');
+            location.href = '/login.html?redirect=' + encodeURIComponent(location.pathname);
+            return;
+          }
+        } catch (err) {
+          alert('請先登入會員才能報名活動');
+          location.href = '/login.html?redirect=' + encodeURIComponent(location.pathname);
+          return;
+        }
+        
+        // Register interest
+        try {
+          btn.disabled = true;
+          btn.textContent = '報名中...';
+          const res = await fetch(`/api/public/events/${eventId}/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin'
+          });
+          const data = await res.json();
+          
+          if (res.ok && data.ok) {
+            btn.textContent = '已報名 ✓';
+            btn.style.background = '#10b981';
+            btn.disabled = true;
+            alert('報名成功！工作人員將與您聯繫確認。');
+          } else {
+            throw new Error(data.error || '報名失敗');
+          }
+        } catch (err) {
+          alert('報名失敗：' + (err.message || '未知錯誤'));
+          btn.disabled = false;
+          btn.textContent = '有興趣參加';
+        }
+      });
+      
+      renderCalendar();
+      applyBackgroundFromSettings('booking', settings);
     } else if (page === 'contact') {
       const form = q('#contact-form');
       form?.addEventListener('submit', async (e) => {

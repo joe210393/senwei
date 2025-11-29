@@ -1797,6 +1797,226 @@
     if (page === 'about.html') await initAboutEditors();
     if (page === 'services.html') await initServicesEditors();
     if (page === 'media-records.html') await initMediaRecordsEditor();
+    if (page === 'booking.html') await initBookingManager();
+  }
+  
+  // ========== 預約報名系統（後台） ==========
+  async function initBookingManager() {
+    let currentDate = new Date();
+    let currentYear = currentDate.getFullYear();
+    let currentMonth = currentDate.getMonth();
+    
+    const calendarEl = document.getElementById('admin-calendar');
+    const monthLabel = document.getElementById('current-month');
+    const prevBtn = document.getElementById('prev-month');
+    const nextBtn = document.getElementById('next-month');
+    const eventsTable = document.getElementById('events-tbody');
+    const createBtn = document.getElementById('create-event-btn');
+    const formModal = document.getElementById('event-form-modal');
+    const eventForm = document.getElementById('event-form');
+    const closeFormBtn = document.getElementById('close-event-form');
+    const cancelFormBtn = document.getElementById('cancel-event-form');
+    
+    if (!calendarEl) return;
+    
+    const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+    
+    function renderCalendar() {
+      const firstDay = new Date(currentYear, currentMonth, 1);
+      const lastDay = new Date(currentYear, currentMonth + 1, 0);
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      
+      calendarEl.innerHTML = '';
+      
+      // Day headers
+      dayNames.forEach(day => {
+        const header = document.createElement('div');
+        header.className = 'calendar-day-header';
+        header.textContent = day;
+        calendarEl.appendChild(header);
+      });
+      
+      // Load events for this month
+      loadEventsForMonth().then(eventsByDate => {
+        const currentDate = new Date(startDate);
+        for (let i = 0; i < 42; i++) {
+          const dayEl = document.createElement('div');
+          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+          const isCurrentMonth = currentDate.getMonth() === currentMonth;
+          const isToday = dateStr === new Date().toISOString().split('T')[0];
+          
+          dayEl.className = 'calendar-day';
+          if (!isCurrentMonth) dayEl.classList.add('other-month');
+          if (isToday) dayEl.classList.add('today');
+          
+          dayEl.innerHTML = `
+            <div class="calendar-day-number">${currentDate.getDate()}</div>
+            <div class="calendar-day-events">
+              ${(eventsByDate[dateStr] || []).map(e => {
+                const colors = { course: '#4A90E2', performance: '#E94B3C', space: '#7B68EE' };
+                return `<div style="display:flex;align-items:center;gap:2px;"><span style="width:6px;height:6px;border-radius:50%;background:${colors[e.event_type]};display:inline-block;"></span><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.title}</span></div>`;
+              }).join('')}
+            </div>
+          `;
+          
+          dayEl.addEventListener('click', () => {
+            if (isCurrentMonth) {
+              const dateInput = document.getElementById('event-date');
+              if (dateInput) dateInput.value = dateStr;
+              formModal.style.display = 'flex';
+              eventForm.reset();
+              document.getElementById('event-id').value = '';
+              document.getElementById('event-form-title').textContent = '新增活動';
+            }
+          });
+          
+          calendarEl.appendChild(dayEl);
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      });
+      
+      if (monthLabel) {
+        monthLabel.textContent = `${currentYear}年 ${currentMonth + 1}月`;
+      }
+    }
+    
+    async function loadEventsForMonth() {
+      try {
+        const events = await api('GET', `/api/admin/events?year=${currentYear}&month=${currentMonth + 1}`);
+        const eventsByDate = {};
+        events.forEach(e => {
+          if (!eventsByDate[e.event_date]) eventsByDate[e.event_date] = [];
+          eventsByDate[e.event_date].push(e);
+        });
+        return eventsByDate;
+      } catch (err) {
+        console.error('Error loading events:', err);
+        return {};
+      }
+    }
+    
+    async function loadEventsList() {
+      try {
+        const events = await api('GET', `/api/admin/events?year=${currentYear}&month=${currentMonth + 1}`);
+        if (!eventsTable) return;
+        
+        eventsTable.innerHTML = '';
+        events.forEach(e => {
+          const tr = document.createElement('tr');
+          const typeNames = { course: '音樂課程', performance: '商業演出', space: '共享空間租借' };
+          tr.innerHTML = `
+            <td style="padding:8px;">${e.event_date}</td>
+            <td style="padding:8px;">${typeNames[e.event_type] || e.event_type}</td>
+            <td style="padding:8px;">${e.title}</td>
+            <td style="padding:8px;">${e.start_time || ''} ${e.end_time ? '-' + e.end_time : ''}</td>
+            <td style="padding:8px;">${e.is_active ? '啟用' : '關閉'}</td>
+            <td style="padding:8px;">
+              <button data-edit="${e.id}" style="margin-right:4px;">編輯</button>
+              <button data-del="${e.id}">刪除</button>
+            </td>
+          `;
+          eventsTable.appendChild(tr);
+        });
+      } catch (err) {
+        console.error('Error loading events list:', err);
+      }
+    }
+    
+    prevBtn?.addEventListener('click', () => {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      renderCalendar();
+      loadEventsList();
+    });
+    
+    nextBtn?.addEventListener('click', () => {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      renderCalendar();
+      loadEventsList();
+    });
+    
+    createBtn?.addEventListener('click', () => {
+      eventForm.reset();
+      document.getElementById('event-id').value = '';
+      document.getElementById('event-form-title').textContent = '新增活動';
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('event-date').value = today;
+      formModal.style.display = 'flex';
+    });
+    
+    closeFormBtn?.addEventListener('click', () => {
+      formModal.style.display = 'none';
+    });
+    
+    cancelFormBtn?.addEventListener('click', () => {
+      formModal.style.display = 'none';
+    });
+    
+    eventForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(eventForm);
+      const data = Object.fromEntries(fd.entries());
+      data.is_active = document.getElementById('event-is-active').checked ? 1 : 0;
+      const id = data.id;
+      delete data.id;
+      
+      try {
+        if (id) {
+          await api('PUT', `/api/admin/events/${id}`, data);
+        } else {
+          await api('POST', '/api/admin/events', data);
+        }
+        formModal.style.display = 'none';
+        renderCalendar();
+        loadEventsList();
+      } catch (err) {
+        alert('儲存失敗：' + (err.message || '未知錯誤'));
+      }
+    });
+    
+    eventsTable?.addEventListener('click', async (e) => {
+      const id = e.target.dataset.edit || e.target.dataset.del;
+      if (!id) return;
+      
+      if (e.target.dataset.edit) {
+        try {
+          const event = await api('GET', `/api/admin/events/${id}`);
+          document.getElementById('event-id').value = event.id;
+          document.getElementById('event-date').value = event.event_date;
+          document.getElementById('event-type').value = event.event_type;
+          document.getElementById('event-title').value = event.title || '';
+          document.getElementById('event-description').value = event.description || '';
+          document.getElementById('event-start-time').value = event.start_time || '';
+          document.getElementById('event-end-time').value = event.end_time || '';
+          document.getElementById('event-max-participants').value = event.max_participants || '';
+          document.getElementById('event-is-active').checked = !!event.is_active;
+          document.getElementById('event-form-title').textContent = '編輯活動';
+          formModal.style.display = 'flex';
+        } catch (err) {
+          alert('載入失敗：' + (err.message || '未知錯誤'));
+        }
+      } else if (e.target.dataset.del) {
+        if (!confirm('確定刪除這個活動？')) return;
+        try {
+          await api('DELETE', `/api/admin/events/${id}`);
+          renderCalendar();
+          loadEventsList();
+        } catch (err) {
+          alert('刪除失敗：' + (err.message || '未知錯誤'));
+        }
+      }
+    });
+    
+    renderCalendar();
+    loadEventsList();
   }
 
   window.addEventListener('DOMContentLoaded', init);

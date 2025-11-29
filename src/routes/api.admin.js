@@ -865,4 +865,103 @@ apiAdminRouter.delete('/products/:id', requireEditorOrAdmin, async (req, res) =>
   res.json({ ok: true });
 });
 
+// ========== 預約報名系統 ==========
+
+// 獲取活動列表（後台）
+apiAdminRouter.get('/events', requireAuth, async (req, res) => {
+  const { year, month } = req.query;
+  let whereClause = '1=1';
+  const params = [];
+  
+  if (year && month) {
+    whereClause += ' AND strftime("%Y", event_date) = ? AND strftime("%m", event_date) = ?';
+    params.push(String(year), String(month).padStart(2, '0'));
+  }
+  
+  const rows = await query(`
+    SELECT e.*, 
+           COUNT(er.id) as registration_count
+    FROM events e
+    LEFT JOIN event_registrations er ON er.event_id = e.id AND er.status = 'interested'
+    WHERE ${whereClause}
+    GROUP BY e.id
+    ORDER BY e.event_date ASC, e.start_time ASC
+  `, params);
+  res.json(rows);
+});
+
+// 獲取單個活動（後台）
+apiAdminRouter.get('/events/:id', requireAuth, async (req, res) => {
+  const rows = await query('SELECT * FROM events WHERE id = ?', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
+});
+
+// 創建活動（後台）
+apiAdminRouter.post('/events', requireEditorOrAdmin, async (req, res) => {
+  const { event_date, event_type, title, description, start_time, end_time, max_participants, is_active } = req.body;
+  
+  if (!event_date || !event_type || !title) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  const result = await query(`
+    INSERT INTO events (event_date, event_type, title, description, start_time, end_time, max_participants, is_active, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+  `, [
+    String(event_date),
+    String(event_type),
+    String(title),
+    description || null,
+    start_time || null,
+    end_time || null,
+    max_participants ? Number(max_participants) : null,
+    is_active ? 1 : 0
+  ]);
+  
+  res.json({ ok: true, id: result.insertId });
+});
+
+// 更新活動（後台）
+apiAdminRouter.put('/events/:id', requireEditorOrAdmin, async (req, res) => {
+  const { event_date, event_type, title, description, start_time, end_time, max_participants, is_active } = req.body;
+  
+  await query(`
+    UPDATE events 
+    SET event_date = ?, event_type = ?, title = ?, description = ?, 
+        start_time = ?, end_time = ?, max_participants = ?, is_active = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `, [
+    String(event_date),
+    String(event_type),
+    String(title),
+    description || null,
+    start_time || null,
+    end_time || null,
+    max_participants ? Number(max_participants) : null,
+    is_active ? 1 : 0,
+    req.params.id
+  ]);
+  
+  res.json({ ok: true });
+});
+
+// 刪除活動（後台）
+apiAdminRouter.delete('/events/:id', requireEditorOrAdmin, async (req, res) => {
+  await query('DELETE FROM events WHERE id = ?', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// 獲取活動報名記錄（後台）
+apiAdminRouter.get('/events/:id/registrations', requireAuth, async (req, res) => {
+  const rows = await query(`
+    SELECT er.*, m.name, m.email, m.phone_mobile
+    FROM event_registrations er
+    JOIN members m ON m.id = er.member_id
+    WHERE er.event_id = ?
+    ORDER BY er.created_at DESC
+  `, [req.params.id]);
+  res.json(rows);
+});
+
 

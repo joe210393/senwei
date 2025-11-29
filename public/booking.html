@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>預約報名</title>
+  <link rel="stylesheet" href="/css/site.css">
+  <script defer src="/js/cms.js"></script>
+  <script defer src="/js/ui.js"></script>
+  <style>
+    .booking-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .calendar-nav {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .calendar-day-header {
+      text-align: center;
+      font-weight: 600;
+      padding: 8px;
+      color: #666;
+      font-size: 14px;
+    }
+    .calendar-day {
+      aspect-ratio: 1;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fff;
+      position: relative;
+    }
+    .calendar-day:hover {
+      border-color: #111827;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .calendar-day.other-month {
+      opacity: 0.3;
+      background: #f9fafb;
+    }
+    .calendar-day.today {
+      border-color: #111827;
+      border-width: 2px;
+      font-weight: 700;
+    }
+    .calendar-day-number {
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .calendar-day-events {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 10px;
+    }
+    .event-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 2px;
+    }
+    .event-dot.course { background: #4A90E2; }
+    .event-dot.performance { background: #E94B3C; }
+    .event-dot.space { background: #7B68EE; }
+    .event-detail-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .event-detail-modal.open {
+      display: flex;
+    }
+    .event-detail-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .event-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .event-item {
+      padding: 16px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .event-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 8px;
+    }
+    .event-type-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .event-type-badge.course { background: #E3F2FD; color: #1976D2; }
+    .event-type-badge.performance { background: #FFEBEE; color: #C62828; }
+    .event-type-badge.space { background: #F3E5F5; color: #7B1FA2; }
+    .event-time {
+      color: #666;
+      font-size: 14px;
+    }
+    .event-description {
+      color: #374151;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+    .interested-btn {
+      margin-top: 12px;
+      width: 100%;
+    }
+    .interested-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body data-page="booking">
+  <header id="site-header" class="site-header"></header>
+  <main class="container">
+    <div class="card">
+      <div class="booking-container">
+        <div class="calendar-header">
+          <h1 style="margin:0;font-size:2rem;">預約報名</h1>
+          <div class="calendar-nav">
+            <button id="prev-month" class="btn ghost">‹ 上個月</button>
+            <span id="current-month" style="font-weight:600;min-width:200px;text-align:center;"></span>
+            <button id="next-month" class="btn ghost">下個月 ›</button>
+          </div>
+        </div>
+        <div id="calendar" class="calendar-grid"></div>
+      </div>
+    </div>
+  </main>
+  
+  <div id="event-detail-modal" class="event-detail-modal">
+    <div class="event-detail-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 id="event-detail-date" style="margin:0;"></h2>
+        <button id="close-event-modal" class="btn ghost" style="padding:4px 8px;">✕</button>
+      </div>
+      <div id="event-list" class="event-list"></div>
+    </div>
+  </div>
+  
+  <a id="line-float" class="line-float" target="_blank" rel="noopener">LINE</a>
+  <footer class="site-footer" id="site-footer"></footer>
+</body>
+</html>
+

@@ -268,6 +268,68 @@ apiPublicRouter.get('/products', async (req, res) => {
   });
 });
 
+// ========== 預約報名系統（公開） ==========
+
+// 獲取活動列表（公開，只顯示啟用的）
+apiPublicRouter.get('/events', async (req, res) => {
+  const { year, month, date } = req.query;
+  let whereClause = 'e.is_active = 1';
+  const params = [];
+  
+  if (date) {
+    whereClause += ' AND e.event_date = ?';
+    params.push(String(date));
+  } else if (year && month) {
+    whereClause += ' AND strftime("%Y", e.event_date) = ? AND strftime("%m", e.event_date) = ?';
+    params.push(String(year), String(month).padStart(2, '0'));
+  }
+  
+  const rows = await query(`
+    SELECT e.*
+    FROM events e
+    WHERE ${whereClause}
+    ORDER BY e.event_date ASC, e.start_time ASC
+  `, params);
+  res.json(rows);
+});
+
+// 獲取單個活動（公開）
+apiPublicRouter.get('/events/:id', async (req, res) => {
+  const rows = await query('SELECT * FROM events WHERE id = ? AND is_active = 1', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Not found' });
+  res.json(rows[0]);
+});
+
+// 報名活動（需登入會員）
+apiPublicRouter.post('/events/:id/register', async (req, res) => {
+  if (!req.session?.member?.id) {
+    return res.status(401).json({ error: '請先登入會員' });
+  }
+  
+  const eventId = req.params.id;
+  const memberId = req.session.member.id;
+  
+  // 檢查活動是否存在且啟用
+  const event = await query('SELECT * FROM events WHERE id = ? AND is_active = 1', [eventId]);
+  if (!event.length) {
+    return res.status(404).json({ error: '活動不存在或已關閉' });
+  }
+  
+  // 檢查是否已經報名
+  const existing = await query('SELECT * FROM event_registrations WHERE event_id = ? AND member_id = ?', [eventId, memberId]);
+  if (existing.length) {
+    return res.status(400).json({ error: '您已經報名過此活動' });
+  }
+  
+  // 創建報名記錄
+  await query(`
+    INSERT INTO event_registrations (event_id, member_id, status, updated_at)
+    VALUES (?, ?, 'interested', datetime('now'))
+  `, [eventId, memberId]);
+  
+  res.json({ ok: true, message: '報名成功！工作人員將與您聯繫確認。' });
+});
+
 // 商品詳情（公開）
 apiPublicRouter.get('/products/:slug', async (req, res) => {
   const slug = String(req.params.slug || '').trim();

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>預約報名管理</title>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/site.css">
+  <script defer src="/js/admin.js"></script>
+</head>
+<body>
+  <div id="admin-layout"></div>
+  <main class="container" style="padding:24px;">
+    <h1>預約報名管理</h1>
+    
+    <div class="card" style="margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2 style="margin:0;">月曆視圖</h2>
+        <div style="display:flex;gap:8px;">
+          <button id="prev-month" class="btn ghost">‹ 上個月</button>
+          <span id="current-month" style="font-weight:600;min-width:200px;text-align:center;"></span>
+          <button id="next-month" class="btn ghost">下個月 ›</button>
+        </div>
+      </div>
+      <div id="admin-calendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;">
+        <!-- Calendar will be rendered here -->
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2 style="margin-top:0;">活動列表</h2>
+      <div style="margin-bottom:16px;">
+        <button id="create-event-btn" class="btn">新增活動</button>
+      </div>
+      <table id="events-table" style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom:2px solid #e5e7eb;">
+            <th style="text-align:left;padding:8px;">日期</th>
+            <th style="text-align:left;padding:8px;">類型</th>
+            <th style="text-align:left;padding:8px;">標題</th>
+            <th style="text-align:left;padding:8px;">時間</th>
+            <th style="text-align:left;padding:8px;">狀態</th>
+            <th style="text-align:left;padding:8px;">操作</th>
+          </tr>
+        </thead>
+        <tbody id="events-tbody"></tbody>
+      </table>
+    </div>
+    
+    <!-- Event Form Modal -->
+    <div id="event-form-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:24px;">
+      <div class="card" style="max-width:600px;width:100%;max-height:80vh;overflow-y:auto;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h2 id="event-form-title" style="margin:0;">新增活動</h2>
+          <button id="close-event-form" class="btn ghost" style="padding:4px 8px;">✕</button>
+        </div>
+        <form id="event-form">
+          <input type="hidden" name="id" id="event-id">
+          <label>
+            日期 <span style="color:#c00;">*</span>
+            <input type="date" name="event_date" id="event-date" required>
+          </label>
+          <label>
+            類型 <span style="color:#c00;">*</span>
+            <select name="event_type" id="event-type" required>
+              <option value="course">音樂課程</option>
+              <option value="performance">商業演出</option>
+              <option value="space">共享空間租借</option>
+            </select>
+          </label>
+          <label>
+            標題 <span style="color:#c00;">*</span>
+            <input type="text" name="title" id="event-title" required placeholder="例如：爵士鼓基礎課程">
+          </label>
+          <label>
+            開始時間
+            <input type="time" name="start_time" id="event-start-time">
+          </label>
+          <label>
+            結束時間
+            <input type="time" name="end_time" id="event-end-time">
+          </label>
+          <label>
+            最大參與人數
+            <input type="number" name="max_participants" id="event-max-participants" min="1">
+          </label>
+          <label>
+            描述
+            <textarea name="description" id="event-description" rows="4" placeholder="活動詳細說明..."></textarea>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" name="is_active" id="event-is-active" checked>
+            <span>啟用</span>
+          </label>
+          <div style="display:flex;gap:8px;margin-top:16px;">
+            <button type="submit" class="btn">儲存</button>
+            <button type="button" id="cancel-event-form" class="btn ghost">取消</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
+

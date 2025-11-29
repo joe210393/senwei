@@ -251,6 +251,39 @@ try {
     const test = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='media_records'").get();
     if (!test) {
       console.log('Creating media_records table...');
+      // Events and registrations tables
+      db.prepare(`CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_date TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NULL,
+        start_time TEXT NULL,
+        end_time TEXT NULL,
+        max_participants INTEGER NULL,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      )`).run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date)`).run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type)`).run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active)`).run();
+      
+      db.prepare(`CREATE TABLE IF NOT EXISTS event_registrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id INTEGER NOT NULL,
+        member_id INTEGER NOT NULL,
+        status TEXT DEFAULT 'interested',
+        notes TEXT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+        FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+      )`).run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_event_registrations_event ON event_registrations(event_id)`).run();
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_event_registrations_member ON event_registrations(member_id)`).run();
+      db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_event_registrations_unique ON event_registrations(event_id, member_id)`).run();
+      
       db.prepare(`CREATE TABLE IF NOT EXISTS media_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,

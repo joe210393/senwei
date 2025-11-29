@@ -231,6 +231,40 @@ CREATE TABLE IF NOT EXISTS product_images (
 CREATE INDEX IF NOT EXISTS idx_product_images_product ON product_images(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_images_order ON product_images(product_id, order_index);
 
+-- 預約報名活動
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_date TEXT NOT NULL, -- DATE format: YYYY-MM-DD
+  event_type TEXT NOT NULL, -- 'course', 'performance', 'space'
+  title TEXT NOT NULL,
+  description TEXT NULL,
+  start_time TEXT NULL, -- TIME format: HH:MM
+  end_time TEXT NULL, -- TIME format: HH:MM
+  max_participants INTEGER NULL,
+  is_active INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_events_date ON events(event_date);
+CREATE INDEX IF NOT EXISTS idx_events_type ON events(event_type);
+CREATE INDEX IF NOT EXISTS idx_events_active ON events(is_active);
+
+-- 活動報名記錄
+CREATE TABLE IF NOT EXISTS event_registrations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  member_id INTEGER NOT NULL,
+  status TEXT DEFAULT 'interested', -- 'interested', 'confirmed', 'cancelled'
+  notes TEXT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+  FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_event_registrations_event ON event_registrations(event_id);
+CREATE INDEX IF NOT EXISTS idx_event_registrations_member ON event_registrations(member_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_event_registrations_unique ON event_registrations(event_id, member_id);
+
 -- 預設關於頁
 INSERT OR IGNORE INTO pages(slug, title, content_html, background_image_id, is_published)
 VALUES
