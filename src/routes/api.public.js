@@ -284,13 +284,29 @@ apiPublicRouter.get('/events', async (req, res) => {
     params.push(String(year), String(month).padStart(2, '0'));
   }
   
-  const rows = await query(`
-    SELECT e.*
-    FROM events e
-    WHERE ${whereClause}
-    ORDER BY e.event_date ASC, e.start_time ASC
-  `, params);
-  res.json(rows);
+  const memberId = req.session?.member?.id;
+  
+  // 如果有登入會員，同時查詢報名狀態
+  if (memberId) {
+    const rows = await query(`
+      SELECT e.*, 
+             CASE WHEN er.id IS NOT NULL THEN 1 ELSE 0 END AS is_registered,
+             er.status AS registration_status
+      FROM events e
+      LEFT JOIN event_registrations er ON er.event_id = e.id AND er.member_id = ?
+      WHERE ${whereClause}
+      ORDER BY e.event_date ASC, e.start_time ASC
+    `, [memberId, ...params]);
+    res.json(rows);
+  } else {
+    const rows = await query(`
+      SELECT e.*
+      FROM events e
+      WHERE ${whereClause}
+      ORDER BY e.event_date ASC, e.start_time ASC
+    `, params);
+    res.json(rows);
+  }
 });
 
 // 獲取單個活動（公開）

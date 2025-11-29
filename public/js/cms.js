@@ -1236,7 +1236,16 @@
             
             if (isCurrentMonth && dayEvents.length > 0) {
               dayEl.style.cursor = 'pointer';
-              dayEl.addEventListener('click', () => showEventDetail(dateStr, dayEvents));
+              dayEl.addEventListener('click', async () => {
+                // 重新載入該日期的活動以獲取最新的報名狀態
+                try {
+                  const dateEvents = await fetchJson(`/api/public/events?date=${dateStr}`);
+                  showEventDetail(dateStr, dateEvents);
+                } catch (err) {
+                  console.error('Error loading event details:', err);
+                  showEventDetail(dateStr, dayEvents);
+                }
+              });
             }
             
             calendarEl.appendChild(dayEl);
@@ -1281,16 +1290,47 @@
         }
       }
       
-      function showEventDetail(dateStr, events) {
+      async function showEventDetail(dateStr, events) {
         if (!eventModal || !eventListEl || !eventDateLabel) return;
         
         const date = new Date(dateStr);
         eventDateLabel.textContent = `${date.getFullYear()}年 ${date.getMonth() + 1}月 ${date.getDate()}日`;
         eventListEl.innerHTML = '';
         
+        // 檢查會員登入狀態和報名狀態
+        let me = null;
+        try {
+          me = await fetchJson('/api/public/members/me');
+        } catch (err) {
+          // 未登入，繼續顯示
+        }
+        
         events.forEach(event => {
+          const isRegistered = event.is_registered === 1 || event.is_registered === true;
+          const registrationStatus = event.registration_status || 'interested';
+          
           const item = document.createElement('div');
           item.className = 'event-item';
+          
+          let buttonHtml = '';
+          if (!me || !me.id) {
+            // 未登入
+            buttonHtml = '<button class="btn interested-btn" data-event-id="' + event.id + '" data-event-title="' + (event.title || '') + '">有興趣參加</button>';
+          } else if (isRegistered) {
+            // 已報名
+            const statusText = {
+              'interested': '已報名',
+              'contacted': '已聯繫',
+              'confirmed': '已確認',
+              'cancelled': '已取消',
+              'pending': '待處理'
+            }[registrationStatus] || '已報名';
+            buttonHtml = '<button class="btn" disabled style="background:#10b981;color:#fff;cursor:not-allowed;">' + statusText + ' ✓</button>';
+          } else {
+            // 未報名
+            buttonHtml = '<button class="btn interested-btn" data-event-id="' + event.id + '" data-event-title="' + (event.title || '') + '">有興趣參加</button>';
+          }
+          
           item.innerHTML = `
             <div class="event-item-header">
               <div>
@@ -1301,7 +1341,7 @@
             ${event.start_time || event.end_time ? `<div class="event-time">時間：${event.start_time || ''} ${event.end_time ? '-' + event.end_time : ''}</div>` : ''}
             ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
             ${event.max_participants ? `<div style="margin-top:8px;color:#666;font-size:14px;">最多 ${event.max_participants} 人</div>` : ''}
-            <button class="btn interested-btn" data-event-id="${event.id}" data-event-title="${event.title}">有興趣參加</button>
+            ${buttonHtml}
           `;
           eventListEl.appendChild(item);
         });
