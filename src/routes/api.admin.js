@@ -321,10 +321,14 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
       title: title ? String(title).substring(0, 50) : 'empty',
       slug: slug ? String(slug).substring(0, 50) : 'empty',
       content_html_length: content_html ? String(content_html).length : 0,
+      content_html_preview: content_html ? String(content_html).substring(0, 200) : 'empty',
       excerpt_length: excerpt ? String(excerpt).length : 0,
       cover_media_id,
       published_at,
-      is_published
+      is_published,
+      content_html_type: typeof content_html,
+      content_html_is_null: content_html === null,
+      content_html_is_undefined: content_html === undefined
     });
     
     // Validate required fields
@@ -342,9 +346,17 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
     }
     
     const pubValue = (is_published === 1 || is_published === '1' || is_published === true) ? 1 : 0;
-    const sanitizedContent = sanitizeContent(content_html || '');
     
-    console.log('[POST /api/admin/news] Sanitized content length:', sanitizedContent.length);
+    // Ensure content_html is a string, even if empty
+    const contentHtmlString = content_html !== null && content_html !== undefined ? String(content_html) : '';
+    const sanitizedContent = sanitizeContent(contentHtmlString);
+    
+    console.log('[POST /api/admin/news] Content processing:', {
+      original_length: contentHtmlString.length,
+      original_preview: contentHtmlString.substring(0, 200),
+      sanitized_length: sanitizedContent.length,
+      sanitized_preview: sanitizedContent.substring(0, 200)
+    });
     
     const result = await query('INSERT INTO news(title, slug, content_html, excerpt, cover_media_id, published_at, is_published) VALUES (?,?,?,?,?,?,?)', [
       String(title).trim(), 

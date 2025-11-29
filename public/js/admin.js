@@ -735,12 +735,35 @@
         data.title = String(data.title).trim();
         data.slug = String(data.slug).trim();
         data.excerpt = String(document.getElementById('news-excerpt').value || '').trim();
+        
         // Get content from editor, ensuring we get the actual HTML content
-        data.content_html = editor.innerHTML || '';
-        // If editor is empty, try to get text content as fallback
-        if (!data.content_html && editor.textContent) {
-          data.content_html = '<p>' + editor.textContent + '</p>';
+        // Check both innerHTML and textContent to ensure we capture content
+        let editorContent = editor.innerHTML || '';
+        const editorText = editor.textContent || '';
+        
+        // If innerHTML is empty or only contains whitespace/br tags, use textContent
+        const cleanHtml = editorContent.replace(/<br\s*\/?>/gi, '').replace(/&nbsp;/gi, ' ').trim();
+        if (!cleanHtml || cleanHtml === '' || cleanHtml === '<div></div>' || cleanHtml === '<p></p>') {
+          if (editorText && editorText.trim()) {
+            // Convert text to HTML paragraphs
+            const paragraphs = editorText.split('\n').filter(p => p.trim()).map(p => `<p>${p.trim()}</p>`).join('');
+            editorContent = paragraphs || '<p>' + editorText.trim() + '</p>';
+          } else {
+            editorContent = '';
+          }
         }
+        
+        // Log editor state for debugging
+        console.log('[Frontend] Editor state:', {
+          innerHTML_length: editor.innerHTML ? editor.innerHTML.length : 0,
+          innerHTML_preview: editor.innerHTML ? editor.innerHTML.substring(0, 100) : 'empty',
+          textContent_length: editorText.length,
+          textContent_preview: editorText.substring(0, 100),
+          final_content_html_length: editorContent.length,
+          final_content_html_preview: editorContent.substring(0, 100)
+        });
+        
+        data.content_html = editorContent;
         const coverMediaIdValue = document.getElementById('news-cover').value;
         data.cover_media_id = coverMediaIdValue && coverMediaIdValue.trim() ? coverMediaIdValue.trim() : null;
         if (data.cover_media_id) {
