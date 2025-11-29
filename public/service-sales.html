@@ -24,9 +24,14 @@
     }
     .products-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-template-columns: repeat(3, 1fr);
       gap: 24px;
       margin-bottom: 32px;
+    }
+    @media (max-width: 768px) {
+      .products-grid {
+        grid-template-columns: 1fr;
+      }
     }
     .product-card {
       background: #fff;
@@ -87,6 +92,7 @@
     </div>
     
     <div id="products-grid" class="products-grid"></div>
+    <div id="products-pager" style="text-align:center;padding:24px 0;"></div>
   </main>
   <a id="line-float" class="line-float" target="_blank" rel="noopener">LINE</a>
   <footer class="site-footer" id="site-footer"></footer>

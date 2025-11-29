@@ -210,30 +210,62 @@ apiPublicRouter.get('/product-categories', async (_req, res) => {
   res.json(rows);
 });
 
-// 商品列表（公開，支援類別篩選）
+// 商品列表（公開，支援類別篩選和分頁）
 apiPublicRouter.get('/products', async (req, res) => {
   const categoryId = req.query.category_id;
-  let rows;
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = 15; // 一頁15個商品
+  const offset = (page - 1) * limit;
+  
+  let countQuery, dataQuery, countParams, dataParams;
+  
   if (categoryId) {
-    rows = await query(`
+    countQuery = `
+      SELECT COUNT(*) as total
+      FROM products p
+      WHERE p.is_published = 1 AND p.category_id = ?
+    `;
+    countParams = [categoryId];
+    dataQuery = `
       SELECT p.id, p.name, p.slug, p.price, p.category_id, c.name AS category_name, m.file_path AS cover_url
       FROM products p
       LEFT JOIN product_categories c ON c.id = p.category_id
       LEFT JOIN media m ON m.id = p.cover_media_id
       WHERE p.is_published = 1 AND p.category_id = ?
       ORDER BY p.id DESC
-    `, [categoryId]);
+      LIMIT ? OFFSET ?
+    `;
+    dataParams = [categoryId, limit, offset];
   } else {
-    rows = await query(`
+    countQuery = `
+      SELECT COUNT(*) as total
+      FROM products p
+      WHERE p.is_published = 1
+    `;
+    countParams = [];
+    dataQuery = `
       SELECT p.id, p.name, p.slug, p.price, p.category_id, c.name AS category_name, m.file_path AS cover_url
       FROM products p
       LEFT JOIN product_categories c ON c.id = p.category_id
       LEFT JOIN media m ON m.id = p.cover_media_id
       WHERE p.is_published = 1
       ORDER BY p.id DESC
-    `);
+      LIMIT ? OFFSET ?
+    `;
+    dataParams = [limit, offset];
   }
-  res.json(rows);
+  
+  const countResult = await query(countQuery, countParams);
+  const total = countResult[0]?.total || 0;
+  const rows = await query(dataQuery, dataParams);
+  
+  res.json({
+    items: rows,
+    page: page,
+    limit: limit,
+    total: total,
+    totalPages: Math.ceil(total / limit)
+  });
 });
 
 // 商品詳情（公開）

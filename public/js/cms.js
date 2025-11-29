@@ -860,13 +860,18 @@
         }
       }
       
-      async function loadProducts(categoryId = null) {
+      let currentPage = 1;
+      let currentCategoryId = null;
+      
+      async function loadProducts(categoryId = null, page = 1) {
         try {
-          const url = categoryId ? `/api/public/products?category_id=${categoryId}` : '/api/public/products';
-          const products = await fetchJson(url);
-          console.log('[Frontend] Loaded products:', products);
-          console.log('[Frontend] productsGrid:', productsGrid);
-          console.log('[Frontend] cardTpl:', cardTpl);
+          currentCategoryId = categoryId;
+          currentPage = page;
+          const url = categoryId 
+            ? `/api/public/products?category_id=${categoryId}&page=${page}` 
+            : `/api/public/products?page=${page}`;
+          const data = await fetchJson(url);
+          console.log('[Frontend] Loaded products data:', data);
           
           if (!productsGrid) {
             console.error('[Frontend] productsGrid not found!');
@@ -881,6 +886,7 @@
           
           productsGrid.innerHTML = '';
           
+          const products = data.items || [];
           if (products && Array.isArray(products) && products.length > 0) {
             console.log('[Frontend] Rendering', products.length, 'products');
             products.forEach((product, index) => {
@@ -941,9 +947,14 @@
                 console.error('[Frontend] Error rendering product', index, ':', err, product);
               }
             });
+            
+            // Render pager
+            renderPager(data.page, data.totalPages);
           } else {
             console.log('[Frontend] No products to display');
             productsGrid.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">目前沒有商品</p>';
+            const pager = q('#products-pager');
+            if (pager) pager.innerHTML = '';
           }
         } catch (err) {
           console.error('[Frontend] Error loading products:', err);
@@ -953,15 +964,75 @@
         }
       }
       
+      function renderPager(currentPage, totalPages) {
+        const pager = q('#products-pager');
+        if (!pager) return;
+        
+        if (totalPages <= 1) {
+          pager.innerHTML = '';
+          return;
+        }
+        
+        pager.innerHTML = '';
+        
+        // Previous button
+        if (currentPage > 1) {
+          const prev = document.createElement('a');
+          prev.href = '#';
+          prev.className = 'btn ghost';
+          prev.textContent = '上一頁';
+          prev.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProducts(currentCategoryId, currentPage - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          pager.appendChild(prev);
+        }
+        
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'btn ghost';
+          a.textContent = i;
+          a.style.padding = '8px 12px';
+          a.style.margin = '0 4px';
+          if (i === currentPage) {
+            a.style.background = '#111827';
+            a.style.color = '#fff';
+          }
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProducts(currentCategoryId, i);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          pager.appendChild(a);
+        }
+        
+        // Next button
+        if (currentPage < totalPages) {
+          const next = document.createElement('a');
+          next.href = '#';
+          next.className = 'btn ghost';
+          next.textContent = '下一頁';
+          next.addEventListener('click', (e) => {
+            e.preventDefault();
+            loadProducts(currentCategoryId, currentPage + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          pager.appendChild(next);
+        }
+      }
+      
       if (categoryFilter) {
         categoryFilter.addEventListener('change', (e) => {
           const categoryId = e.target.value || null;
-          loadProducts(categoryId);
+          loadProducts(categoryId, 1); // Reset to page 1 when category changes
         });
       }
       
       await loadCategories();
-      await loadProducts();
+      await loadProducts(null, 1);
       
       applyBackgroundFromSettings('service-sales', settings);
     } else if (page === 'product-detail') {

@@ -1531,13 +1531,22 @@
     
     document.getElementById('product-cover-file')?.addEventListener('change', async (e) => {
       if (!e.target.files || !e.target.files[0]) return;
-      const csrf = await getCsrf();
-      const fd = new FormData();
-      fd.append('file', e.target.files[0]);
-      const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
-      const j = await res.json();
-      if (j && j.media_id) {
-        prodForm.querySelector('[name="cover_media_id"]').value = j.media_id;
+      try {
+        const csrf = await getCsrf();
+        const fd = new FormData();
+        fd.append('file', e.target.files[0]);
+        const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
+        const j = await res.json();
+        console.log('[Product Cover Upload] Response:', j);
+        if (j && j.media_id) {
+          prodForm.querySelector('[name="cover_media_id"]').value = j.media_id;
+          alert('封面圖片上傳成功！');
+        } else {
+          alert('上傳失敗：' + (j?.error || '未知錯誤'));
+        }
+      } catch (err) {
+        console.error('[Product Cover Upload] Error:', err);
+        alert('上傳失敗：' + err.message);
       }
     });
     
@@ -1549,17 +1558,32 @@
     
     document.getElementById('product-images-file')?.addEventListener('change', async (e) => {
       if (!e.target.files || !e.target.files.length) return;
-      const csrf = await getCsrf();
-      for (const file of Array.from(e.target.files)) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
-        const j = await res.json();
-        if (j && j.media_id) {
-          productImages.push({ media_id: j.media_id, file_path: j.file_path || '', file_name: file.name });
+      try {
+        const csrf = await getCsrf();
+        let successCount = 0;
+        for (const file of Array.from(e.target.files)) {
+          const fd = new FormData();
+          fd.append('file', file);
+          const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
+          const j = await res.json();
+          console.log('[Product Images Upload] Response:', j);
+          if (j && j.media_id) {
+            // Get file_path from response or construct it
+            const filePath = j.file_path || j.path || `/uploads/${j.file_name || file.name}`;
+            productImages.push({ media_id: j.media_id, file_path: filePath, file_name: j.file_name || file.name });
+            successCount++;
+          }
         }
+        if (successCount > 0) {
+          renderProductImages();
+          alert(`成功上傳 ${successCount} 張圖片！`);
+        } else {
+          alert('上傳失敗，請重試');
+        }
+      } catch (err) {
+        console.error('[Product Images Upload] Error:', err);
+        alert('上傳失敗：' + err.message);
       }
-      renderProductImages();
     });
     
     // Description editor toolbar
@@ -1603,19 +1627,28 @@
     
     document.getElementById('product-desc-upload-file')?.addEventListener('change', async (e) => {
       if (!e.target.files || !e.target.files[0]) return;
-      const csrf = await getCsrf();
-      const fd = new FormData();
-      fd.append('file', e.target.files[0]);
-      const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
-      const j = await res.json();
-      if (j && j.file_path) {
-        const img = document.createElement('img');
-        img.src = j.file_path;
-        img.alt = '';
-        img.style.maxWidth = '100%';
-        if (descEditor) {
-          descEditor.appendChild(img);
+      try {
+        const csrf = await getCsrf();
+        const fd = new FormData();
+        fd.append('file', e.target.files[0]);
+        const res = await fetch('/api/admin/media/upload', { method: 'POST', headers: { 'CSRF-Token': csrf }, body: fd, credentials: 'same-origin' });
+        const j = await res.json();
+        console.log('[Product Desc Upload] Response:', j);
+        if (j && (j.file_path || j.path)) {
+          const img = document.createElement('img');
+          img.src = j.file_path || j.path;
+          img.alt = '';
+          img.style.maxWidth = '100%';
+          if (descEditor) {
+            descEditor.appendChild(img);
+          }
+          alert('圖片已插入！');
+        } else {
+          alert('上傳失敗：' + (j?.error || '未知錯誤'));
         }
+      } catch (err) {
+        console.error('[Product Desc Upload] Error:', err);
+        alert('上傳失敗：' + err.message);
       }
     });
     
