@@ -375,18 +375,42 @@
                 if (!url) return '';
                 try {
                     const u = new URL(url);
+                    // YouTube handling
                     if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
-                        let vid = u.searchParams.get('v');
-                        if (u.hostname === 'youtu.be') vid = u.pathname.slice(1);
-                        if (u.pathname.includes('/embed/')) vid = u.pathname.split('/')[2];
-                        if (vid) return `<iframe src="https://www.youtube.com/embed/${vid}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;height:200px;"></iframe>`;
+                        let vid = null;
+                        // Handle different YouTube URL formats
+                        if (u.hostname === 'youtu.be' || u.hostname.includes('youtu.be')) {
+                            // https://youtu.be/VIDEO_ID
+                            vid = u.pathname.replace(/^\//, '').split('/')[0].split('?')[0];
+                        } else if (u.pathname.includes('/embed/')) {
+                            // https://www.youtube.com/embed/VIDEO_ID
+                            vid = u.pathname.split('/embed/')[1].split('?')[0];
+                        } else if (u.pathname.includes('/v/')) {
+                            // https://www.youtube.com/v/VIDEO_ID
+                            vid = u.pathname.split('/v/')[1].split('?')[0];
+                        } else if (u.pathname.includes('/shorts/')) {
+                            // https://www.youtube.com/shorts/VIDEO_ID
+                            vid = u.pathname.split('/shorts/')[1].split('?')[0];
+                        } else {
+                            // https://www.youtube.com/watch?v=VIDEO_ID
+                            vid = u.searchParams.get('v');
+                        }
+                        // Clean video ID (remove any extra parameters)
+                        if (vid) {
+                            vid = vid.split('&')[0].split('#')[0].trim();
+                            if (vid) {
+                                return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:8px;margin-bottom:16px;"><iframe src="https://www.youtube.com/embed/${vid}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe></div>`;
+                            }
+                        }
                     }
+                    // Facebook handling
                     if (u.hostname.includes('facebook.com')) {
-                        // Facebook basic iframe embed
                         const encoded = encodeURIComponent(url);
-                        return `<iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=500&show_text=true&height=200&appId" width="100%" height="200" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+                        return `<div class="fb-wrapper" style="margin-bottom:16px;"><iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=500&show_text=true&height=500&appId" width="100%" height="500" style="border:none;overflow:hidden;border-radius:8px;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
                     }
-                } catch {}
+                } catch (err) {
+                    console.error('[Frontend] Error parsing embed URL:', url, err);
+                }
                 return ''; // Fallback or link
             }
 
@@ -456,13 +480,17 @@
             if (pager) {
                 const totalPages = Math.ceil(data.total / data.limit);
                 pager.innerHTML = '';
-                for (let i = 1; i <= totalPages; i++) {
-                    const a = document.createElement('a');
-                    a.href = `?page=${i}`;
-                    a.textContent = i;
-                    a.style.marginRight = '8px';
-                    if (i === data.page) a.style.fontWeight = '700';
-                    pager.appendChild(a);
+                if (totalPages > 1) {
+                    for (let i = 1; i <= totalPages; i++) {
+                        const a = document.createElement('a');
+                        a.href = `?page=${i}`;
+                        a.textContent = i;
+                        if (i === data.page) {
+                            a.style.background = '#0066cc';
+                            a.style.color = '#fff';
+                        }
+                        pager.appendChild(a);
+                    }
                 }
             }
         } catch (err) {
@@ -479,22 +507,43 @@
         q('#post-title').textContent = item.title;
         q('#post-content').innerHTML = item.content_html || '';
         
-        // Render large embed
-        if (item.embed_url) {
-             let embedHtml = '';
-             try {
-                const u = new URL(item.embed_url);
+        // Render large embed using same function as list page
+        function getEmbedLarge(url) {
+            if (!url) return '';
+            try {
+                const u = new URL(url);
                 if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
-                    let vid = u.searchParams.get('v');
-                    if (u.hostname === 'youtu.be') vid = u.pathname.slice(1);
-                    if (u.pathname.includes('/embed/')) vid = u.pathname.split('/')[2];
-                    if (vid) embedHtml = `<iframe src="https://www.youtube.com/embed/${vid}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%;aspect-ratio:16/9;"></iframe>`;
+                    let vid = null;
+                    if (u.hostname === 'youtu.be' || u.hostname.includes('youtu.be')) {
+                        vid = u.pathname.replace(/^\//, '').split('/')[0].split('?')[0];
+                    } else if (u.pathname.includes('/embed/')) {
+                        vid = u.pathname.split('/embed/')[1].split('?')[0];
+                    } else if (u.pathname.includes('/v/')) {
+                        vid = u.pathname.split('/v/')[1].split('?')[0];
+                    } else if (u.pathname.includes('/shorts/')) {
+                        vid = u.pathname.split('/shorts/')[1].split('?')[0];
+                    } else {
+                        vid = u.searchParams.get('v');
+                    }
+                    if (vid) {
+                        vid = vid.split('&')[0].split('#')[0].trim();
+                        if (vid) {
+                            return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="https://www.youtube.com/embed/${vid}?rel=0" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe></div>`;
+                        }
+                    }
                 }
                 if (u.hostname.includes('facebook.com')) {
-                    const encoded = encodeURIComponent(item.embed_url);
-                    embedHtml = `<iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=750&show_text=true&height=500&appId" width="100%" height="500" style="border:none;overflow:hidden" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe>`;
+                    const encoded = encodeURIComponent(url);
+                    return `<div class="fb-wrapper" style="margin-bottom:24px;"><iframe src="https://www.facebook.com/plugins/post.php?href=${encoded}&width=750&show_text=true&height=600&appId" width="100%" height="600" style="border:none;overflow:hidden;border-radius:12px;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>`;
                 }
-            } catch {}
+            } catch (err) {
+                console.error('[Frontend] Error parsing embed URL:', url, err);
+            }
+            return '';
+        }
+        
+        if (item.embed_url) {
+            const embedHtml = getEmbedLarge(item.embed_url);
             if (embedHtml) q('#post-embed').innerHTML = embedHtml;
         }
         
@@ -563,15 +612,21 @@
         target.appendChild(node);
       });
       const pager = q('#pager');
-      const totalPages = Math.ceil(data.total / data.limit);
-      pager.innerHTML = '';
-      for (let i = 1; i <= totalPages; i++) {
-        const a = document.createElement('a');
-        a.href = `?page=${i}`;
-        a.textContent = i;
-        a.style.marginRight = '8px';
-        if (i === data.page) a.style.fontWeight = '700';
-        pager.appendChild(a);
+      if (pager) {
+        const totalPages = Math.ceil(data.total / data.limit);
+        pager.innerHTML = '';
+        if (totalPages > 1) {
+          for (let i = 1; i <= totalPages; i++) {
+            const a = document.createElement('a');
+            a.href = `?page=${i}`;
+            a.textContent = i;
+            if (i === data.page) {
+              a.style.background = '#0066cc';
+              a.style.color = '#fff';
+            }
+            pager.appendChild(a);
+          }
+        }
       }
       applyBackgroundFromSettings('news', settings);
     } else if (page === 'news-post') {

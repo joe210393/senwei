@@ -3,27 +3,100 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>最新消息</title>
+  <title>相關報導</title>
   <link rel="stylesheet" href="/css/site.css">
-  <style>.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}.card{background:#fff;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.06);padding:16px}</style>
+  <style>
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    .news-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+    }
+    .news-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .news-card-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      display: block;
+    }
+    .news-card-content {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .news-card h3 {
+      margin: 0 0 12px 0;
+      font-size: 1.25rem;
+      line-height: 1.4;
+      color: #333;
+    }
+    .news-card p {
+      margin: 0 0 16px 0;
+      color: #666;
+      line-height: 1.6;
+      flex: 1;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .news-card .btn {
+      align-self: flex-start;
+      margin-top: auto;
+    }
+    #pager {
+      text-align: center;
+      padding: 24px 0;
+    }
+    #pager a {
+      display: inline-block;
+      padding: 8px 16px;
+      margin: 0 4px;
+      background: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+    #pager a:hover {
+      background: #f5f5f5;
+    }
+  </style>
   <script defer src="/js/cms.js"></script>
 </head>
 <body data-page="news">
   <header id="site-header" class="site-header"></header>
   <main class="container">
-    <h1>最新消息</h1>
-    <div id="news-list" data-list="news.items"><div class="grid" data-target="list"></div></div>
+    <h1 class="mb-4">相關報導</h1>
+    <div id="news-list" data-list="news.items"><div class="news-grid" data-target="list"></div></div>
     <nav id="pager"></nav>
   </main>
   <a id="line-float" class="line-float" target="_blank" rel="noopener">LINE</a>
   <template id="news-list-item-tpl">
-    <article class="card">
-      <img data-prop="src:cover_url" alt="" style="width:100%;height:180px;object-fit:cover;margin-bottom:12px;">
-      <h3 data-prop="text:title"></h3>
-      <p data-prop="text:excerpt"></p>
-      <a class="btn ghost" data-prop="href:link">閱讀更多</a>
+    <article class="news-card">
+      <img data-prop="src:cover_url" alt="" class="news-card-image" onerror="this.style.display='none'">
+      <div class="news-card-content">
+        <h3 data-prop="text:title"></h3>
+        <p data-prop="text:excerpt"></p>
+        <a class="btn ghost" data-prop="href:link">閱讀更多</a>
+      </div>
     </article>
   </template>
+  <footer class="site-footer" id="site-footer"></footer>
 </body>
 </html>
 
