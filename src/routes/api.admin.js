@@ -838,7 +838,7 @@ apiAdminRouter.put('/products/:id', requireAuth, async (req, res) => {
     
     const sanitizedHtml = sanitizeContent(description_html || '');
     await query(
-      'UPDATE products SET name=?, slug=?, price=?, category_id=?, cover_media_id=?, description_html=?, is_published=?, updated_at=datetime("now") WHERE id=?',
+      'UPDATE products SET name=?, slug=?, price=?, category_id=?, cover_media_id=?, description_html=?, is_published=?, updated_at=datetime(\'now\') WHERE id=?',
       [String(name).trim(), slug, Number(price), normalizedCategoryId, normalizedCoverMediaId, sanitizedHtml, is_published ? 1 : 0, req.params.id]
     );
     
