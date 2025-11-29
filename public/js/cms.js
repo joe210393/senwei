@@ -1185,7 +1185,10 @@
       const eventListEl = q('#event-list');
       const eventDateLabel = q('#event-detail-date');
       
-      if (!calendarEl) return;
+      if (!calendarEl) {
+        console.error('[Frontend] Calendar element not found');
+        return;
+      }
       
       const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
       const typeNames = { course: '音樂課程', performance: '商業演出', space: '共享空間租借' };
@@ -1248,6 +1251,10 @@
       async function loadEventsForMonth() {
         try {
           const events = await fetchJson(`/api/public/events?year=${currentYear}&month=${currentMonth + 1}`);
+          if (!Array.isArray(events)) {
+            console.warn('[Frontend] Events API returned non-array:', events);
+            return {};
+          }
           const eventsByDate = {};
           events.forEach(e => {
             if (!eventsByDate[e.event_date]) eventsByDate[e.event_date] = [];
@@ -1256,6 +1263,7 @@
           return eventsByDate;
         } catch (err) {
           console.error('[Frontend] Error loading events:', err);
+          // Don't clear calendar on error, just show empty state
           return {};
         }
       }
