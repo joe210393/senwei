@@ -49,7 +49,99 @@
             </div>
           </div>`;
       }
-      document.querySelectorAll('[data-tab]').forEach(btn => btn.addEventListener('click', () => showTab(btn.getAttribute('data-tab'))));
+      document.querySelectorAll('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          showTab(btn.getAttribute('data-tab'));
+          if (btn.getAttribute('data-tab') === 'events') {
+            loadEventRegistrations();
+          }
+        });
+      });
+      
+      // 載入活動報名記錄
+      async function loadEventRegistrations() {
+        const container = document.getElementById('events-registrations-list');
+        if (!container) return;
+        
+        try {
+          const me = await getProfile();
+          if (!me || !me.id) {
+            container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#999;">請先登入</div>';
+            return;
+          }
+          
+          // 獲取會員的報名記錄
+          const registrations = await fetch('/api/public/members/registrations', {
+            credentials: 'same-origin'
+          });
+          
+          if (!registrations.ok) {
+            throw new Error('Failed to load registrations');
+          }
+          
+          const data = await registrations.json();
+          
+          if (!data || data.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#999;">尚無報名記錄</div>';
+            return;
+          }
+          
+          const statusNames = {
+            'interested': '有興趣',
+            'contacted': '已聯繫',
+            'confirmed': '已確認',
+            'cancelled': '已取消',
+            'pending': '待處理'
+          };
+          
+          const statusColors = {
+            'interested': '#3b82f6',
+            'contacted': '#8b5cf6',
+            'confirmed': '#10b981',
+            'cancelled': '#ef4444',
+            'pending': '#f59e0b'
+          };
+          
+          const typeNames = {
+            'course': '音樂課程',
+            'performance': '商業演出',
+            'space': '共享空間租借'
+          };
+          
+          container.innerHTML = data.map(reg => {
+            const date = new Date(reg.event_date);
+            const formattedDate = `${date.getFullYear()}年 ${date.getMonth() + 1}月 ${date.getDate()}日`;
+            const timeStr = reg.start_time ? ` ${reg.start_time}` : '';
+            const status = reg.status || 'interested';
+            
+            return `
+              <div style="padding:16px;border:1px solid #e5e7eb;border-radius:12px;margin-bottom:12px;background:#fff;">
+                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px;">
+                  <div style="flex:1;">
+                    <h3 style="margin:0 0 8px 0;font-size:18px;color:#111827;">${reg.event_title || '未命名活動'}</h3>
+                    <div style="font-size:14px;color:#666;margin-bottom:4px;">
+                      📅 ${formattedDate}${timeStr}
+                    </div>
+                    <div style="font-size:14px;color:#666;">
+                      🎯 ${typeNames[reg.event_type] || reg.event_type}
+                    </div>
+                  </div>
+                  <span style="display:inline-block;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:500;background:${statusColors[status] || '#999'};color:#fff;">
+                    ${statusNames[status] || status}
+                  </span>
+                </div>
+                ${reg.description ? `<div style="font-size:14px;color:#666;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;">${reg.description}</div>` : ''}
+                <div style="font-size:12px;color:#999;margin-top:8px;">
+                  報名時間：${new Date(reg.created_at).toLocaleString('zh-TW')}
+                </div>
+              </div>
+            `;
+          }).join('');
+        } catch (err) {
+          console.error('Error loading event registrations:', err);
+          container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#c00;">載入失敗，請重新整理頁面</div>';
+        }
+      }
       // Load course contents (YouTube list) per member tier, grouped by category, with disclaimer modal
       try {
         const resC = await fetch('/api/public/courses', { credentials: 'same-origin' });
