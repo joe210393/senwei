@@ -375,7 +375,7 @@
                 if (!url) return '';
                 try {
                     const u = new URL(url);
-                    // YouTube handling - comply with YouTube API policies
+                    // YouTube handling - comply with YouTube IFrame Player API documentation
                     if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be') || u.hostname.includes('youtube-nocookie.com')) {
                         let vid = null;
                         // Handle different YouTube URL formats
@@ -398,11 +398,15 @@
                         // Clean video ID (remove any extra parameters)
                         if (vid) {
                             vid = vid.split('&')[0].split('#')[0].trim();
+                            // Validate video ID format (YouTube video IDs are 11 characters)
                             if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+                                // Get origin for security (as per YouTube API documentation)
+                                const origin = window.location.origin || window.location.protocol + '//' + window.location.host;
                                 // Use youtube-nocookie.com for privacy compliance
+                                // Add enablejsapi=1 as required by IFrame Player API
+                                // Add origin parameter for security (prevents malicious third-party JavaScript)
                                 // Add rel=0 to not show related videos, modestbranding=1 to reduce YouTube branding
-                                // Add enablejsapi=1 for better compatibility
-                                const embedUrl = `https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1&enablejsapi=1`;
+                                const embedUrl = `https://www.youtube-nocookie.com/embed/${vid}?enablejsapi=1&origin=${encodeURIComponent(origin)}&rel=0&modestbranding=1`;
                                 return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:8px;margin-bottom:16px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
                             }
                         }
@@ -516,7 +520,7 @@
             if (!url) return '';
             try {
                 const u = new URL(url);
-                // YouTube handling - comply with YouTube API policies
+                // YouTube handling - comply with YouTube IFrame Player API documentation
                 if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be') || u.hostname.includes('youtube-nocookie.com')) {
                     let vid = null;
                     if (u.hostname === 'youtu.be' || u.hostname.includes('youtu.be')) {
@@ -534,10 +538,13 @@
                         vid = vid.split('&')[0].split('#')[0].trim();
                         // Validate video ID format (YouTube video IDs are 11 characters)
                         if (vid && /^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+                            // Get origin for security (as per YouTube API documentation)
+                            const origin = window.location.origin || window.location.protocol + '//' + window.location.host;
                             // Use youtube-nocookie.com for privacy compliance
+                            // Add enablejsapi=1 as required by IFrame Player API
+                            // Add origin parameter for security (prevents malicious third-party JavaScript)
                             // Add rel=0 to not show related videos, modestbranding=1 to reduce YouTube branding
-                            // Add enablejsapi=1 for better compatibility
-                            const embedUrl = `https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1&enablejsapi=1`;
+                            const embedUrl = `https://www.youtube-nocookie.com/embed/${vid}?enablejsapi=1&origin=${encodeURIComponent(origin)}&rel=0&modestbranding=1`;
                             return `<div class="video-wrapper" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;max-width:100%;background:#000;border-radius:12px;margin-bottom:24px;"><iframe src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;" loading="lazy"></iframe></div>`;
                         }
                     }
