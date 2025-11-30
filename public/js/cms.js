@@ -797,10 +797,27 @@
       applyBackgroundFromSettings('news', settings);
     } else if (page === 'news-post') {
       const slug = getQueryParam('slug');
-      const item = await fetchJson(`/api/public/news/${encodeURIComponent(slug)}`);
-      q('#news-title').textContent = item.title;
-      q('#news-content').innerHTML = item.content_html;
-      applyBackgroundFromSettings('news_post', settings);
+      if (!slug) {
+        console.error('[Frontend news-post] No slug provided');
+        q('#news-title').textContent = '文章不存在';
+        q('#news-content').innerHTML = '<p>找不到指定的文章。</p>';
+        return;
+      }
+      try {
+        console.log('[Frontend news-post] Loading article with slug:', slug);
+        const item = await fetchJson(`/api/public/news/${encodeURIComponent(slug)}`);
+        if (!item || !item.title) {
+          throw new Error('Article data is empty');
+        }
+        console.log('[Frontend news-post] Article loaded:', item.id, item.title, 'content_html length:', item.content_html?.length || 0);
+        q('#news-title').textContent = item.title;
+        q('#news-content').innerHTML = item.content_html || '<p>文章內容為空。</p>';
+        applyBackgroundFromSettings('news_post', settings);
+      } catch (err) {
+        console.error('[Frontend news-post] Error loading article:', err);
+        q('#news-title').textContent = '載入失敗';
+        q('#news-content').innerHTML = `<p>無法載入文章內容。錯誤：${err.message || '未知錯誤'}</p>`;
+      }
     } else if (page === 'leaderboard') {
       async function load() {
         const rows = await fetchJson('/api/public/leaderboard');

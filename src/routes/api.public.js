@@ -109,10 +109,33 @@ apiPublicRouter.get('/news', async (req, res) => {
 });
 
 apiPublicRouter.get('/news/:slug', async (req, res) => {
-  const rows = await query('SELECT * FROM news WHERE slug = ? AND is_published = 1', [req.params.slug]);
-  const item = rows[0];
-  if (!item) return res.status(404).json({ error: 'Not found' });
-  res.json(item);
+  try {
+    const slug = decodeURIComponent(req.params.slug);
+    console.log('[GET /api/public/news/:slug] Looking for slug:', slug);
+    
+    // First try with is_published = 1
+    let rows = await query('SELECT * FROM news WHERE slug = ? AND is_published = 1', [slug]);
+    
+    // If not found, check if the article exists at all (for debugging)
+    if (!rows || rows.length === 0) {
+      const allRows = await query('SELECT id, title, slug, is_published FROM news WHERE slug = ?', [slug]);
+      console.log('[GET /api/public/news/:slug] Article exists?', allRows.length > 0);
+      if (allRows.length > 0) {
+        console.log('[GET /api/public/news/:slug] Found article but is_published =', allRows[0].is_published);
+      }
+    }
+    
+    const item = rows?.[0];
+    if (!item) {
+      return res.status(404).json({ error: 'Not found', slug: slug });
+    }
+    
+    console.log('[GET /api/public/news/:slug] Returning article:', item.id, item.title);
+    res.json(item);
+  } catch (err) {
+    console.error('[GET /api/public/news/:slug] Error:', err);
+    res.status(500).json({ error: 'Internal Server Error', details: err.message });
+  }
 });
 
 // 影像紀錄 列表／內頁
