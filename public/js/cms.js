@@ -787,8 +787,10 @@
             a.href = `?page=${i}`;
             a.textContent = i;
             if (i === data.page) {
-              a.style.background = '#0066cc';
+              a.style.background = '#111827';
               a.style.color = '#fff';
+              a.style.borderColor = '#111827';
+              a.style.fontWeight = '700';
             }
             pager.appendChild(a);
           }
@@ -1121,7 +1123,6 @@
         if (currentPage > 1) {
           const prev = document.createElement('a');
           prev.href = '#';
-          prev.className = 'btn ghost';
           prev.textContent = '上一頁';
           prev.addEventListener('click', (e) => {
             e.preventDefault();
