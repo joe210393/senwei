@@ -35,16 +35,18 @@
               <input type="file" id="news-cover-file" accept="image/*" hidden>
             </div>
           </div>
-          <div class="mt-2"><label>內容</label>
+          <div class="mt-2"><label>內容 <span style="color:#ef4444;font-size:12px;">*必填</span></label>
             <div class="toolbar" id="news-toolbar">
               <button data-cmd="bold">粗體</button>
               <button data-cmd="italic">斜體</button>
               <button data-cmd="insertUnorderedList">項目符號</button>
               <button data-cmd="formatBlock" data-value="h2">H2</button>
               <button id="news-insert-img" class="ghost" type="button">插入圖片</button>
+              <button id="news-upload-img" class="ghost" type="button">上傳圖片</button>
               <input type="file" id="news-insert-file" accept="image/*" hidden>
             </div>
-            <div id="news-editor" class="editor" contenteditable="true"></div>
+            <div id="news-editor" class="editor" contenteditable="true" style="min-height:400px;border:2px solid #e5e7eb;border-radius:8px;padding:16px;background:#fff;" placeholder="請在此輸入文章內容..."></div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280;">提示：可以直接貼上文字，或使用上方工具列進行格式化</div>
           </div>
           <div class="mt-2"><label>發佈時間</label><input type="datetime-local" name="published_at" id="news-published"></div>
           <div class="mt-2"><label><input type="checkbox" name="is_published" id="news-published-flag"> 發佈</label></div>

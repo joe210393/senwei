@@ -672,8 +672,21 @@
     const tbody = table.querySelector('tbody'); tbody.innerHTML = '';
     rows.forEach(r => { const tr=document.createElement('tr'); tr.innerHTML = `<td>${r.id}</td><td>${r.title}</td><td>${r.slug}</td><td>${r.is_published ? '✔' : '—'}</td><td><button data-edit="${r.id}">編輯</button> <button data-del="${r.id}">刪除</button></td>`; tbody.appendChild(tr); });
     toolbar?.addEventListener('click', (e) => { const btn=e.target.closest('[data-cmd]'); if (!btn) return; const cmd=btn.getAttribute('data-cmd'); const val=btn.getAttribute('data-value')||null; document.execCommand(cmd,false,val); });
-    document.getElementById('news-insert-img')?.addEventListener('click', ()=> document.getElementById('news-insert-file').click());
-    document.getElementById('news-insert-file')?.addEventListener('change', async (e) => { const f=e.target.files?.[0]; if (!f) return; const csrf=await getCsrf(); const fd=new FormData(); fd.append('file', f); const res=await fetch('/api/admin/media/upload',{method:'POST', headers:{'CSRF-Token': csrf}, body: fd, credentials:'same-origin'}); const j=await res.json(); if (j?.path || j?.file_path) { insertImageAtCursor(editor, j.path || j.file_path); } });
+    document.getElementById('news-insert-img')?.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); document.getElementById('news-insert-file').click(); });
+    document.getElementById('news-upload-img')?.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); document.getElementById('news-insert-file').click(); });
+    document.getElementById('news-insert-file')?.addEventListener('change', async (e) => { 
+      const f=e.target.files?.[0]; 
+      if (!f) return; 
+      const csrf=await getCsrf(); 
+      const fd=new FormData(); 
+      fd.append('file', f); 
+      const res=await fetch('/api/admin/media/upload',{method:'POST', headers:{'CSRF-Token': csrf}, body: fd, credentials:'same-origin'}); 
+      const j=await res.json(); 
+      if (j?.path || j?.file_path) { 
+        insertImageAtCursor(editor, j.path || j.file_path); 
+      }
+      e.target.value = ''; // Reset file input
+    });
     // picker/upload cover
     const picker = document.getElementById('news-picker'); const pickerGrid=document.getElementById('news-picker-grid'); const pickerPager=document.getElementById('news-picker-pager');
     async function loadMedia(page=1){ const data=await api('GET', `/api/admin/media?page=${page}&limit=24`); pickerGrid.innerHTML=''; data.items.forEach(it=>{ const btn=document.createElement('button'); btn.className='btn ghost'; btn.style.display='block'; btn.style.padding='0'; btn.style.borderRadius='12px'; btn.style.overflow='hidden'; btn.style.border='1px solid #e5e7eb'; btn.style.background='#fff'; btn.innerHTML=`<img src="${it.file_path}" alt="" style="width:100%;height:120px;object-fit:cover"><div style=\"padding:8px 10px;font-size:12px;color:#374151;\">${it.file_name}</div>`; btn.addEventListener('click',()=>{ document.getElementById('news-cover').value = it.id || ''; picker.style.display='none'; }); pickerGrid.appendChild(btn); }); pickerPager.innerHTML=''; const totalPages=Math.ceil(data.total/data.limit); for(let i=1;i<=totalPages;i++){ const a=document.createElement('a'); a.href='#'; a.textContent=i; a.className='btn ghost'; a.style.padding='6px 10px'; a.style.borderRadius='8px'; if (i===data.page){ a.style.background='#111827'; a.style.color='#fff'; } a.addEventListener('click',(e)=>{e.preventDefault(); loadMedia(i);}); pickerPager.appendChild(a);} }
@@ -693,7 +706,15 @@
         document.getElementById('news-title').value = String(r.title || '').trim(); 
         document.getElementById('news-slug').value = String(r.slug || '').trim(); 
         document.getElementById('news-excerpt').value = String(r.excerpt || ''); 
-        editor.innerHTML = String(r.content_html || ''); 
+        // Load content_html, ensuring editor is visible and has content
+        const contentHtml = String(r.content_html || '').trim();
+        editor.innerHTML = contentHtml;
+        console.log('[Admin News] Loading article:', r.id, 'content_html length:', contentHtml.length);
+        if (!contentHtml) {
+          console.warn('[Admin News] Warning: Article has no content_html');
+          // Focus editor to make it clear where to type
+          setTimeout(() => editor.focus(), 100);
+        }
         document.getElementById('news-cover').value = r.cover_media_id ? String(r.cover_media_id) : ''; 
         
         // Convert SQL datetime to datetime-local format if needed
@@ -730,6 +751,23 @@
         if (!data.slug || !data.slug.trim()) {
           alert('請輸入 Slug');
           return;
+        }
+        
+        // Validate content_html - ensure editor has content
+        const editorContent = editor.innerHTML || '';
+        const editorText = editor.textContent || '';
+        const hasContent = editorContent.trim().length > 0 && 
+                          editorContent !== '<div></div>' && 
+                          editorContent !== '<p></p>' && 
+                          editorContent !== '<br>' &&
+                          editorText.trim().length > 0;
+        
+        if (!hasContent) {
+          const confirmEmpty = confirm('警告：文章內容為空。確定要儲存嗎？\n\n如果確定，請點擊「確定」繼續。\n如果要輸入內容，請點擊「取消」後在內容編輯器中輸入。');
+          if (!confirmEmpty) {
+            editor.focus();
+            return;
+          }
         }
         
         data.title = String(data.title).trim();
