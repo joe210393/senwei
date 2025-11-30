@@ -2656,8 +2656,8 @@
     }
     
     // 定期更新最新預約記錄（每30秒）
-    loadLatestRegistrations();
-    setInterval(loadLatestRegistrations, 30000);
+    loadLatestRegistrations(1);
+    setInterval(() => loadLatestRegistrations(registrationsPage), 30000);
     
     renderCalendar();
     loadEventsList();
