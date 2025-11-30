@@ -815,15 +815,8 @@
     });
     cleanPickerClose?.addEventListener('click',(e)=>{e.preventDefault(); picker.style.display='none';});
     
-    // Hide slug input and make it auto-generated
-    const slugInput = document.getElementById('news-slug');
-    if (slugInput) {
-      slugInput.style.display = 'none';
-      const slugLabel = slugInput.previousElementSibling;
-      if (slugLabel && slugLabel.tagName === 'LABEL') {
-        slugLabel.style.display = 'none';
-      }
-    }
+    // Hide slug input and make it auto-generated (already hidden via type="hidden" in HTML)
+    // No need to hide it with CSS since it's already type="hidden"
     
     cleanForm.addEventListener('submit', async (e)=>{ 
       e.preventDefault(); 
