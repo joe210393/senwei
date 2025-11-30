@@ -955,14 +955,25 @@ apiAdminRouter.post('/products', requireAuth, async (req, res) => {
       'INSERT INTO products (name, slug, price, category_id, cover_media_id, description_html, is_published) VALUES (?, ?, ?, ?, ?, ?, ?)',
       [String(name).trim(), slug, Number(price), normalizedCategoryId, normalizedCoverMediaId, sanitizedHtml, is_published ? 1 : 0]
     );
-    const productId = result.lastInsertRowid;
+    const productId = result.insertId || result.lastInsertRowid;
+    
+    // Validate productId before inserting images
+    if (!productId || productId === 0) {
+      console.error('[POST /products] Failed to get product ID from insert result:', result);
+      return res.status(500).json({ error: 'Internal Server Error', details: 'Failed to create product' });
+    }
     
     // Insert product images
-    if (Array.isArray(images) && images.length > 0) {
+    if (Array.isArray(images) && images.length > 0 && productId) {
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
         if (img && img.media_id) {
-          await query('INSERT INTO product_images (product_id, media_id, order_index) VALUES (?, ?, ?)', [productId, Number(img.media_id), i]);
+          try {
+            await query('INSERT INTO product_images (product_id, media_id, order_index) VALUES (?, ?, ?)', [productId, Number(img.media_id), i]);
+          } catch (imgErr) {
+            console.error(`[POST /products] Error inserting product image ${i}:`, imgErr);
+            // Continue with other images even if one fails
+          }
         }
       }
     }
