@@ -868,7 +868,16 @@
               retryCount++;
               // Generate a new unique slug with timestamp and random number
               const newSuffix = Date.now() + '-' + Math.floor(Math.random() * 1000);
-              data.slug = generateUniqueSlug(data.title, newSuffix);
+              // Use the same generateUniqueSlug function defined above
+              const baseTitle = data.title;
+              let newSlug = baseTitle
+                .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emoji
+                .replace(/[^\w\s\u4e00-\u9fff-]/g, '') // Keep alphanumeric, Chinese, spaces, hyphens
+                .replace(/\s+/g, '-') // Replace spaces with hyphens
+                .replace(/-+/g, '-') // Replace multiple hyphens with single
+                .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+              if (!newSlug) newSlug = 'article';
+              data.slug = newSlug + '-' + newSuffix;
               console.log(`[Frontend] Slug conflict detected, retrying with new slug (attempt ${retryCount}):`, data.slug);
               // Update the slug input field
               document.getElementById('news-slug').value = data.slug;
