@@ -836,8 +836,37 @@
           // Not JSON, use as-is
         }
         
-        // If it's a slug conflict, suggest editing the existing item
+        // If it's a slug conflict, try to load the existing item and edit it
         if (displayMsg.includes('Slug already exists')) {
+          try {
+            const parsed = JSON.parse(errorMsg);
+            if (parsed.existing_id) {
+              // Load the existing news item and populate the form
+              const existingNews = await api('GET', '/api/admin/news');
+              const existingItem = existingNews.find(n => String(n.id) === String(parsed.existing_id));
+              if (existingItem) {
+                // Populate form with existing data
+                document.getElementById('news-title').value = existingItem.title || '';
+                document.getElementById('news-slug').value = existingItem.slug || '';
+                document.getElementById('news-excerpt').value = existingItem.excerpt || '';
+                editor.innerHTML = existingItem.content_html || '';
+                document.getElementById('news-cover').value = existingItem.cover_media_id || '';
+                if (existingItem.published_at) {
+                  const pubDate = String(existingItem.published_at).replace(' ', 'T').slice(0, 16);
+                  document.getElementById('news-published').value = pubDate;
+                } else {
+                  document.getElementById('news-published').value = '';
+                }
+                document.getElementById('news-published-flag').checked = !!(existingItem.is_published === 1 || existingItem.is_published === '1' || existingItem.is_published === true);
+                form.querySelector('[name="id"]').value = String(existingItem.id);
+                
+                alert('偵測到該 Slug 已存在（ID: ' + parsed.existing_id + '）。已自動載入該項目，請確認內容後再次儲存。');
+                return; // Don't show error, form is now populated
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load existing news:', e);
+          }
           alert('儲存失敗：Slug 已存在。這可能是因為第一次儲存已成功，但返回了錯誤。請重新整理頁面後編輯該項目。');
         } else {
           alert('儲存失敗：' + displayMsg);
