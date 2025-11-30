@@ -339,17 +339,6 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Slug is required' });
     }
     
-    // Check if slug already exists
-    const existing = await query('SELECT id, title FROM news WHERE slug = ?', [String(slug).trim()]);
-    if (existing && existing.length > 0) {
-      console.log('[POST /api/admin/news] Slug conflict detected:', existing[0]);
-      return res.status(400).json({ 
-        error: 'Slug already exists',
-        existing_id: existing[0].id,
-        existing_title: existing[0].title
-      });
-    }
-    
     const pubValue = (is_published === 1 || is_published === '1' || is_published === true) ? 1 : 0;
     
     // Ensure content_html is a string, even if empty
@@ -363,6 +352,8 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
       sanitized_preview: sanitizedContent.substring(0, 200)
     });
     
+    // Try to INSERT directly - let the database UNIQUE constraint handle conflicts
+    // This avoids race conditions with pre-checking
     try {
       const result = await query('INSERT INTO news(title, slug, content_html, excerpt, cover_media_id, published_at, is_published) VALUES (?,?,?,?,?,?,?)', [
         String(title).trim(), 
@@ -385,7 +376,6 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
       });
       
       // If INSERT succeeded (we got an insertId), return success immediately
-      // No need to verify - if INSERT didn't throw an error, the data is in the database
       if (insertedId) {
         console.log('[POST /api/admin/news] Returning success with id:', insertedId);
         return res.json({ ok: true, id: insertedId });
@@ -395,10 +385,10 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
         return res.json({ ok: true, id: null });
       }
     } catch (insertErr) {
-      // If INSERT fails (e.g., UNIQUE constraint), handle it
+      // If INSERT fails due to UNIQUE constraint, query the existing record and return it
       console.error('[POST /api/admin/news] INSERT failed:', insertErr);
       if (insertErr.message && insertErr.message.includes('UNIQUE constraint')) {
-        // Check if the slug already exists (might have been inserted in a previous attempt)
+        // Query the existing record
         const existing = await query('SELECT id, title FROM news WHERE slug = ?', [String(slug).trim()]);
         if (existing && existing.length > 0) {
           console.log('[POST /api/admin/news] UNIQUE constraint - slug exists:', existing[0]);
@@ -408,8 +398,14 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
             existing_title: existing[0].title
           });
         }
+        // If we can't find the existing record, return a generic error
+        return res.status(400).json({ 
+          error: 'Slug already exists',
+          details: 'A record with this slug already exists'
+        });
       }
-      throw insertErr; // Re-throw to be caught by outer try-catch
+      // For other errors, re-throw to be caught by outer try-catch
+      throw insertErr;
     }
   } catch (err) {
     console.error('[POST /api/admin/news] Error:', err);

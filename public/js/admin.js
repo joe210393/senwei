@@ -842,31 +842,42 @@
           try {
             const parsed = JSON.parse(errorMsg);
             if (parsed.existing_id) {
+              console.log('[Frontend] Attempting to load existing news with ID:', parsed.existing_id);
               // Load the existing news item and populate the form
               const existingNews = await api('GET', '/api/admin/news');
-              const existingItem = existingNews.find(n => String(n.id) === String(parsed.existing_id));
+              console.log('[Frontend] Loaded news list, count:', existingNews ? existingNews.length : 0);
+              const existingItem = existingNews && Array.isArray(existingNews) ? existingNews.find(n => String(n.id) === String(parsed.existing_id)) : null;
               if (existingItem) {
+                console.log('[Frontend] Found existing item:', existingItem);
                 // Populate form with existing data
-                document.getElementById('news-title').value = existingItem.title || '';
-                document.getElementById('news-slug').value = existingItem.slug || '';
-                document.getElementById('news-excerpt').value = existingItem.excerpt || '';
-                editor.innerHTML = existingItem.content_html || '';
-                document.getElementById('news-cover').value = existingItem.cover_media_id || '';
+                document.getElementById('news-title').value = String(existingItem.title || '').trim();
+                document.getElementById('news-slug').value = String(existingItem.slug || '').trim();
+                document.getElementById('news-excerpt').value = String(existingItem.excerpt || '');
+                editor.innerHTML = String(existingItem.content_html || '');
+                document.getElementById('news-cover').value = existingItem.cover_media_id ? String(existingItem.cover_media_id) : '';
                 if (existingItem.published_at) {
                   const pubDate = String(existingItem.published_at).replace(' ', 'T').slice(0, 16);
                   document.getElementById('news-published').value = pubDate;
                 } else {
                   document.getElementById('news-published').value = '';
                 }
-                document.getElementById('news-published-flag').checked = !!(existingItem.is_published === 1 || existingItem.is_published === '1' || existingItem.is_published === true);
-                form.querySelector('[name="id"]').value = String(existingItem.id);
+                const isPublished = (existingItem.is_published === 1 || existingItem.is_published === '1' || existingItem.is_published === true);
+                document.getElementById('news-published-flag').checked = isPublished;
+                form.querySelector('[name="id"]').value = String(existingItem.id); 
                 
                 alert('偵測到該 Slug 已存在（ID: ' + parsed.existing_id + '）。已自動載入該項目，請確認內容後再次儲存。');
                 return; // Don't show error, form is now populated
+              } else {
+                console.warn('[Frontend] Existing item not found in list, ID:', parsed.existing_id);
               }
             }
           } catch (e) {
             console.error('Failed to load existing news:', e);
+            console.error('Error details:', {
+              message: e.message,
+              stack: e.stack,
+              name: e.name
+            });
           }
           alert('儲存失敗：Slug 已存在。這可能是因為第一次儲存已成功，但返回了錯誤。請重新整理頁面後編輯該項目。');
         } else {
