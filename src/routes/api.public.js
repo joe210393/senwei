@@ -402,7 +402,16 @@ apiPublicRouter.get('/courses', async (req, res) => {
   try {
     // Tier hierarchy: free < basic < advanced < platinum
     const tierOrder = { free: 0, basic: 1, advanced: 2, platinum: 3 };
-    const memberTier = req.session?.member?.tier || 'free';
+    
+    // If member is logged in, fetch latest tier from database to ensure it's up-to-date
+    // This ensures that when admin updates member tier, the change is reflected immediately
+    let memberTier = 'free';
+    if (req.session?.member?.id) {
+      const memberRows = await query('SELECT tier FROM members WHERE id = ? LIMIT 1', [req.session.member.id]);
+      if (memberRows.length > 0 && memberRows[0].tier) {
+        memberTier = memberRows[0].tier;
+      }
+    }
     
     // Normalize member tier (ensure it's one of the valid values)
     const normalizedMemberTier = tierOrder.hasOwnProperty(memberTier) ? memberTier : 'free';
@@ -443,7 +452,16 @@ apiPublicRouter.get('/materials', async (req, res) => {
   try {
     // Tier hierarchy: free < basic < advanced < platinum
     const tierOrder = { free: 0, basic: 1, advanced: 2, platinum: 3 };
-    const memberTier = req.session?.member?.tier || 'free';
+    
+    // If member is logged in, fetch latest tier from database to ensure it's up-to-date
+    // This ensures that when admin updates member tier, the change is reflected immediately
+    let memberTier = 'free';
+    if (req.session?.member?.id) {
+      const memberRows = await query('SELECT tier FROM members WHERE id = ? LIMIT 1', [req.session.member.id]);
+      if (memberRows.length > 0 && memberRows[0].tier) {
+        memberTier = memberRows[0].tier;
+      }
+    }
     
     // Normalize member tier (ensure it's one of the valid values)
     const normalizedMemberTier = tierOrder.hasOwnProperty(memberTier) ? memberTier : 'free';
