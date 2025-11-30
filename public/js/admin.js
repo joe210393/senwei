@@ -733,7 +733,41 @@
         }
         
         data.title = String(data.title).trim();
-        data.slug = String(data.slug).trim();
+        let originalSlug = String(data.slug).trim();
+        
+        // Helper function to generate a unique slug from title
+        function generateUniqueSlug(title, suffix = '') {
+          // Remove emoji and special characters, keep only alphanumeric, Chinese, and basic punctuation
+          let slug = title
+            .replace(/[\u{1F300}-\u{1F9FF}]/gu, '') // Remove emoji
+            .replace(/[^\w\s\u4e00-\u9fff-]/g, '') // Keep alphanumeric, Chinese, spaces, hyphens
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single
+            .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+          
+          // If slug is empty after cleaning, use a default
+          if (!slug) {
+            slug = 'article';
+          }
+          
+          // Add suffix if provided
+          if (suffix) {
+            slug = slug + '-' + suffix;
+          }
+          
+          return slug;
+        }
+        
+        // For new articles, auto-generate unique slug if slug is empty or same as title
+        if (!id) {
+          if (!originalSlug || originalSlug === data.title) {
+            // Generate slug from title with timestamp to ensure uniqueness
+            originalSlug = generateUniqueSlug(data.title, Date.now());
+            console.log('[Frontend] Auto-generated slug for new article:', originalSlug);
+          }
+        }
+        
+        data.slug = originalSlug;
         data.excerpt = String(document.getElementById('news-excerpt').value || '').trim();
         
         // Get content from editor, ensuring we get the actual HTML content
@@ -798,21 +832,52 @@
         });
         
         let response;
-        if (id) {
-          response = await api('PUT', `/api/admin/news/${id}`, data);
-        } else {
-          response = await api('POST', '/api/admin/news', data);
-        }
+        let retryCount = 0;
+        const maxRetries = 3;
         
-        console.log('[Frontend] Save response:', response);
-        
-        // Check if response indicates success
-        // response is a JSON object from api() function, not a Response object
-        if (response && (response.ok === true || response.id !== undefined)) {
-          alert('儲存成功');
-          location.reload();
-        } else {
-          throw new Error('儲存失敗：未收到成功響應');
+        // Retry logic for slug conflicts
+        while (retryCount <= maxRetries) {
+          try {
+            if (id) {
+              response = await api('PUT', `/api/admin/news/${id}`, data);
+            } else {
+              response = await api('POST', '/api/admin/news', data);
+            }
+            
+            console.log('[Frontend] Save response:', response);
+            
+            // Check if response indicates success
+            if (response && (response.ok === true || response.id !== undefined)) {
+              alert('儲存成功');
+              location.reload();
+              return; // Success, exit function
+            } else {
+              throw new Error('儲存失敗：未收到成功響應');
+            }
+          } catch (saveErr) {
+            const errorMsg = saveErr.message || '';
+            let parsed;
+            try {
+              parsed = JSON.parse(errorMsg);
+            } catch {
+              parsed = null;
+            }
+            
+            // If it's a slug conflict and we're creating a new article, try to fix it
+            if (parsed && parsed.error === 'Slug already exists' && !id && retryCount < maxRetries) {
+              retryCount++;
+              // Generate a new unique slug with timestamp and random number
+              const newSuffix = Date.now() + '-' + Math.floor(Math.random() * 1000);
+              data.slug = generateUniqueSlug(data.title, newSuffix);
+              console.log(`[Frontend] Slug conflict detected, retrying with new slug (attempt ${retryCount}):`, data.slug);
+              // Update the slug input field
+              document.getElementById('news-slug').value = data.slug;
+              continue; // Retry with new slug
+            }
+            
+            // If not a slug conflict or max retries reached, throw the error
+            throw saveErr;
+          }
         }
       } catch (err) {
         console.error('Error saving news:', err);
