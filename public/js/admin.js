@@ -737,16 +737,34 @@
         location.reload(); 
       } 
     });
+    
     let isSubmitting = false; // Prevent duplicate submissions
-    form.addEventListener('submit', async (e)=>{ 
+    let submitBtn = form.querySelector('button[type="submit"]');
+    
+    // Remove any existing submit listeners by cloning the form
+    const formClone = form.cloneNode(true);
+    form.parentNode.replaceChild(formClone, form);
+    const cleanForm = document.getElementById('news-form');
+    submitBtn = cleanForm.querySelector('button[type="submit"]');
+    
+    cleanForm.addEventListener('submit', async (e)=>{ 
       e.preventDefault(); 
+      e.stopPropagation(); // Prevent event bubbling
+      
       if (isSubmitting) {
         console.warn('[Frontend] Already submitting, ignoring duplicate submit');
         return;
       }
       isSubmitting = true;
+      
+      // Disable submit button to prevent double clicks
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '儲存中...';
+      }
+      
       try {
-        const fd=new FormData(form); 
+        const fd=new FormData(cleanForm); 
         const data=Object.fromEntries(fd.entries());
         
         // Validate required fields
@@ -804,8 +822,18 @@
         
         // Get content from editor, ensuring we get the actual HTML content
         // Check both innerHTML and textContent to ensure we capture content
-        let editorContent = editor.innerHTML || '';
-        const editorText = editor.textContent || '';
+        const currentEditor = document.getElementById('news-editor');
+        if (!currentEditor) {
+          isSubmitting = false;
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '儲存';
+          }
+          alert('找不到編輯器，請重新整理頁面');
+          return;
+        }
+        let editorContent = currentEditor.innerHTML || '';
+        const editorText = currentEditor.textContent || '';
         
         // Validate content_html - ensure editor has content
         const hasContent = editorContent.trim().length > 0 && 
@@ -895,10 +923,15 @@
             
             // Check if response indicates success
             if (response && (response.ok === true || response.id !== undefined)) {
+              console.log('[Frontend] Save successful, stopping retry loop');
               isSubmitting = false; // Reset before reload
+              if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '儲存';
+              }
               alert('儲存成功');
               location.reload();
-              return; // Success, exit function
+              return; // Success, exit function immediately
             } else {
               throw new Error('儲存失敗：未收到成功響應');
             }
@@ -936,12 +969,24 @@
             
             // If not a slug conflict or max retries reached, throw the error
             isSubmitting = false; // Reset on error
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = '儲存';
+            }
             throw saveErr;
           }
         }
         isSubmitting = false; // Reset if we exit the loop without success
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '儲存';
+        }
       } catch (err) {
         isSubmitting = false; // Reset on error
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '儲存';
+        }
         console.error('Error saving news:', err);
         console.error('Error details:', {
           message: err.message,
