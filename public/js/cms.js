@@ -1122,6 +1122,7 @@
             : `/api/public/products?page=${page}&limit=9`;
           const data = await fetchJson(url);
           console.log('[Frontend] Loaded products data:', data);
+          console.log('[Frontend] Total products:', data.total, 'Total pages:', data.totalPages, 'Current page:', data.page, 'Limit:', data.limit);
           
           if (!productsGrid) {
             console.error('[Frontend] productsGrid not found!');
@@ -1216,14 +1217,21 @@
       
       function renderPager(currentPage, totalPages) {
         const pager = q('#products-pager');
-        if (!pager) return;
+        if (!pager) {
+          console.error('[Frontend] Pager element not found!');
+          return;
+        }
         
-        if (totalPages <= 1) {
+        console.log('[Frontend] renderPager called with currentPage:', currentPage, 'totalPages:', totalPages);
+        
+        if (!totalPages || totalPages <= 1) {
+          console.log('[Frontend] Only one page or no pages, clearing pager');
           pager.innerHTML = '';
           return;
         }
         
         pager.innerHTML = '';
+        console.log('[Frontend] Rendering pager for', totalPages, 'pages');
         
         // Previous button
         if (currentPage > 1) {
@@ -1251,6 +1259,10 @@
           a.textContent = i;
           if (i === currentPage) {
             a.classList.add('active');
+            a.style.background = '#111827';
+            a.style.color = '#fff';
+            a.style.borderColor = '#111827';
+            a.style.fontWeight = '700';
           }
           a.addEventListener('click', (e) => {
             e.preventDefault();
