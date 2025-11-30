@@ -737,8 +737,14 @@
         location.reload(); 
       } 
     });
+    let isSubmitting = false; // Prevent duplicate submissions
     form.addEventListener('submit', async (e)=>{ 
       e.preventDefault(); 
+      if (isSubmitting) {
+        console.warn('[Frontend] Already submitting, ignoring duplicate submit');
+        return;
+      }
+      isSubmitting = true;
       try {
         const fd=new FormData(form); 
         const data=Object.fromEntries(fd.entries());
@@ -788,6 +794,8 @@
             // Generate slug from title with timestamp to ensure uniqueness
             originalSlug = generateUniqueSlug(data.title, Date.now());
             console.log('[Frontend] Auto-generated slug for new article:', originalSlug);
+            // Update the slug input field immediately to prevent duplicate submissions
+            document.getElementById('news-slug').value = originalSlug;
           }
         }
         
@@ -887,6 +895,7 @@
             
             // Check if response indicates success
             if (response && (response.ok === true || response.id !== undefined)) {
+              isSubmitting = false; // Reset before reload
               alert('儲存成功');
               location.reload();
               return; // Success, exit function
@@ -906,7 +915,8 @@
             if (parsed && parsed.error === 'Slug already exists' && !id && retryCount < maxRetries) {
               retryCount++;
               // Generate a new unique slug with timestamp and random number
-              const newSuffix = Date.now() + '-' + Math.floor(Math.random() * 1000);
+              // Use a more unique suffix to avoid conflicts
+              const newSuffix = Date.now() + '-' + Math.floor(Math.random() * 10000) + '-' + retryCount;
               // Use the same generateUniqueSlug function defined above
               const baseTitle = data.title;
               let newSlug = baseTitle
@@ -918,16 +928,20 @@
               if (!newSlug) newSlug = 'article';
               data.slug = newSlug + '-' + newSuffix;
               console.log(`[Frontend] Slug conflict detected, retrying with new slug (attempt ${retryCount}):`, data.slug);
-              // Update the slug input field
+              // Update the slug input field to keep it in sync
               document.getElementById('news-slug').value = data.slug;
+              // Update data.slug to ensure we use the new slug in the next attempt
               continue; // Retry with new slug
             }
             
             // If not a slug conflict or max retries reached, throw the error
+            isSubmitting = false; // Reset on error
             throw saveErr;
           }
         }
+        isSubmitting = false; // Reset if we exit the loop without success
       } catch (err) {
+        isSubmitting = false; // Reset on error
         console.error('Error saving news:', err);
         console.error('Error details:', {
           message: err.message,
