@@ -806,8 +806,9 @@
         
         console.log('[Frontend] Save response:', response);
         
-        // If we got a response with an id, reload the page to show the new item
-        if (response && response.ok) {
+        // Check if response indicates success
+        // response is a JSON object from api() function, not a Response object
+        if (response && (response.ok === true || response.id !== undefined)) {
           alert('儲存成功');
           location.reload();
         } else {

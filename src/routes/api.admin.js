@@ -387,11 +387,12 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
       // If INSERT succeeded (we got an insertId), return success immediately
       // No need to verify - if INSERT didn't throw an error, the data is in the database
       if (insertedId) {
-        res.json({ ok: true, id: insertedId });
+        console.log('[POST /api/admin/news] Returning success with id:', insertedId);
+        return res.json({ ok: true, id: insertedId });
       } else {
         // This should not happen, but handle it gracefully
         console.warn('[POST /api/admin/news] INSERT succeeded but no insertId returned');
-        res.json({ ok: true, id: null });
+        return res.json({ ok: true, id: null });
       }
     } catch (insertErr) {
       // If INSERT fails (e.g., UNIQUE constraint), handle it
@@ -400,6 +401,7 @@ apiAdminRouter.post('/news', requireAuth, async (req, res) => {
         // Check if the slug already exists (might have been inserted in a previous attempt)
         const existing = await query('SELECT id, title FROM news WHERE slug = ?', [String(slug).trim()]);
         if (existing && existing.length > 0) {
+          console.log('[POST /api/admin/news] UNIQUE constraint - slug exists:', existing[0]);
           return res.status(400).json({ 
             error: 'Slug already exists',
             existing_id: existing[0].id,
