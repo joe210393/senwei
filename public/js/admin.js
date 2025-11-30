@@ -1188,7 +1188,9 @@
       table?.querySelectorAll('[data-media-check]').forEach(cb => cb.checked = false);
       updateDeleteButton();
     }
+    let currentPage = 1;
     async function load(page=1){
+      currentPage = page;
       const qp = q && q.value.trim() ? `&q=${encodeURIComponent(q.value.trim())}` : '';
       const data = await api('GET', `/api/admin/media?page=${page}&limit=24${qp}`);
       if (table){
@@ -1202,14 +1204,84 @@
           tbody.appendChild(tr);
         });
       }
+      
+      // Render pager
+      const pager = document.getElementById('media-pager');
+      if (pager) {
+        const totalPages = Math.ceil(data.total / data.limit);
+        pager.innerHTML = '';
+        
+        if (totalPages <= 1) {
+          return;
+        }
+        
+        // Previous button
+        if (currentPage > 1) {
+          const prev = document.createElement('a');
+          prev.href = '#';
+          prev.className = 'btn ghost';
+          prev.textContent = '上一頁';
+          prev.style.minWidth = '80px';
+          prev.addEventListener('click', (e) => {
+            e.preventDefault();
+            load(currentPage - 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          pager.appendChild(prev);
+        }
+        
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+          const a = document.createElement('a');
+          a.href = '#';
+          a.className = 'btn ghost';
+          a.textContent = i;
+          a.style.minWidth = '40px';
+          a.style.height = '40px';
+          a.style.display = 'inline-flex';
+          a.style.alignItems = 'center';
+          a.style.justifyContent = 'center';
+          if (i === currentPage) {
+            a.style.background = '#111827';
+            a.style.color = '#fff';
+            a.style.borderColor = '#111827';
+            a.style.fontWeight = '700';
+          }
+          a.addEventListener('click', (e) => {
+            e.preventDefault();
+            load(i);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          pager.appendChild(a);
+        }
+        
+        // Next button
+        if (currentPage < totalPages) {
+          const next = document.createElement('a');
+          next.href = '#';
+          next.className = 'btn ghost';
+          next.textContent = '下一頁';
+          next.style.minWidth = '80px';
+          next.addEventListener('click', (e) => {
+            e.preventDefault();
+            load(currentPage + 1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+          pager.appendChild(next);
+        }
+      }
     }
     await load(1);
-    searchBtn?.addEventListener('click', ()=> load(1));
+    searchBtn?.addEventListener('click', ()=> {
+      currentPage = 1;
+      load(1);
+    });
     btn?.addEventListener('click', async () => {
       if (!file.files[0]) return alert('請選擇檔案');
       const csrf = await getCsrf();
       const fd = new FormData(); fd.append('file', file.files[0]);
       await fetch('/api/admin/media/upload', { method:'POST', headers: { 'CSRF-Token': csrf }, body: fd });
+      currentPage = 1;
       await load(1);
       alert('已上傳');
     });
@@ -1220,6 +1292,7 @@
         if (!id) return;
         if (!confirm('確定刪除此媒體檔案？這會連同實體檔一併刪除')) return;
         await api('DELETE', `/api/admin/media/${id}`);
+        currentPage = 1;
         await load(1);
         alert('媒體已刪除');
         return;
@@ -1249,6 +1322,7 @@
       for (const id of Array.from(selected)) {
         await api('DELETE', `/api/admin/media/${id}`);
       }
+      currentPage = 1;
       await load(1);
       alert('選取媒體已刪除');
     });
