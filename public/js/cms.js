@@ -1118,8 +1118,8 @@
           currentCategoryId = categoryId;
           currentPage = page;
           const url = categoryId 
-            ? `/api/public/products?category_id=${categoryId}&page=${page}` 
-            : `/api/public/products?page=${page}`;
+            ? `/api/public/products?category_id=${categoryId}&page=${page}&limit=9` 
+            : `/api/public/products?page=${page}&limit=9`;
           const data = await fetchJson(url);
           console.log('[Frontend] Loaded products data:', data);
           
@@ -1229,10 +1229,15 @@
         if (currentPage > 1) {
           const prev = document.createElement('a');
           prev.href = '#';
+          prev.className = 'btn ghost';
           prev.textContent = '上一頁';
           prev.addEventListener('click', (e) => {
             e.preventDefault();
-            loadProducts(currentCategoryId, currentPage - 1);
+            const newPage = currentPage - 1;
+            const url = new URL(location.href);
+            url.searchParams.set('page', newPage);
+            history.pushState({}, '', url);
+            loadProducts(currentCategoryId, newPage);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           });
           pager.appendChild(prev);
@@ -1244,14 +1249,14 @@
           a.href = '#';
           a.className = 'btn ghost';
           a.textContent = i;
-          a.style.padding = '8px 12px';
-          a.style.margin = '0 4px';
           if (i === currentPage) {
-            a.style.background = '#111827';
-            a.style.color = '#fff';
+            a.classList.add('active');
           }
           a.addEventListener('click', (e) => {
             e.preventDefault();
+            const url = new URL(location.href);
+            url.searchParams.set('page', i);
+            history.pushState({}, '', url);
             loadProducts(currentCategoryId, i);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           });
@@ -1266,7 +1271,11 @@
           next.textContent = '下一頁';
           next.addEventListener('click', (e) => {
             e.preventDefault();
-            loadProducts(currentCategoryId, currentPage + 1);
+            const newPage = currentPage + 1;
+            const url = new URL(location.href);
+            url.searchParams.set('page', newPage);
+            history.pushState({}, '', url);
+            loadProducts(currentCategoryId, newPage);
             window.scrollTo({ top: 0, behavior: 'smooth' });
           });
           pager.appendChild(next);
@@ -1276,12 +1285,25 @@
       if (categoryFilter) {
         categoryFilter.addEventListener('change', (e) => {
           const categoryId = e.target.value || null;
-          loadProducts(categoryId, 1); // Reset to page 1 when category changes
+          // Reset to page 1 when category changes and update URL
+          const url = new URL(location.href);
+          url.searchParams.set('page', '1');
+          if (categoryId) {
+            url.searchParams.set('category_id', categoryId);
+          } else {
+            url.searchParams.delete('category_id');
+          }
+          history.pushState({}, '', url);
+          loadProducts(categoryId, 1);
         });
       }
       
       await loadCategories();
-      await loadProducts(null, 1);
+      
+      // Get page number from URL, default to 1
+      const urlParams = new URLSearchParams(location.search);
+      const initialPage = Math.max(1, parseInt(urlParams.get('page')) || 1);
+      await loadProducts(null, initialPage);
       
       applyBackgroundFromSettings('service-sales', settings);
     } else if (page === 'product-detail') {

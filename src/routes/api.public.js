@@ -237,7 +237,7 @@ apiPublicRouter.get('/product-categories', async (_req, res) => {
 apiPublicRouter.get('/products', async (req, res) => {
   const categoryId = req.query.category_id;
   const page = Math.max(1, parseInt(req.query.page) || 1);
-  const limit = 15; // 一頁15個商品
+  const limit = Math.max(1, parseInt(req.query.limit) || 15); // 支援 limit 參數，預設 15
   const offset = (page - 1) * limit;
   
   let countQuery, dataQuery, countParams, dataParams;
