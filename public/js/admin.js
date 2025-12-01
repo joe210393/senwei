@@ -56,9 +56,15 @@
     if (page === 'login.html') return null;
     const res = await fetch('/api/admin/me');
     const me = await res.json();
-    if ((!me || !me.id) && page !== 'login.html') location.href = '/admin/login.html';
+    if ((!me || !me.id) && page !== 'login.html') {
+      location.href = '/admin/login.html';
+      return null;
+    }
+    // Force redirect to change password page if must_change_password is true
+    // This check happens on every page load to ensure users can't bypass it
     if (me && me.must_change_password && page !== 'change-password.html') {
       location.href = '/admin/change-password.html';
+      return null;
     }
     // 非 admin 的 editor：隱藏使用者管理，且若直接進入 users.html 則導回首頁
     if (me && me.role === 'editor') {
@@ -1649,8 +1655,12 @@
       const msg = document.getElementById('msg');
       if (res.ok) {
         const user = await res.json();
-        if (user.must_change_password) location.href = '/admin/change-password.html';
-        else location.href = '/admin/index.html';
+        // Check must_change_password flag and redirect accordingly
+        if (user.must_change_password) {
+          location.href = '/admin/change-password.html';
+        } else {
+          location.href = '/admin/index.html';
+        }
       } else {
         msg && (msg.textContent = '登入失敗');
       }

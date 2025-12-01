@@ -773,6 +773,22 @@ apiAdminRouter.put('/users/:id', requireAdmin, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Delete user (admin only)
+apiAdminRouter.delete('/users/:id', requireAdmin, async (req, res) => {
+  const userId = req.params.id;
+  // Prevent deleting yourself
+  if (String(userId) === String(req.session?.user?.id)) {
+    return res.status(400).json({ error: 'Cannot delete yourself' });
+  }
+  // Check if user exists
+  const rows = await query('SELECT id FROM users WHERE id = ?', [userId]);
+  if (rows.length === 0) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  await query('DELETE FROM users WHERE id = ?', [userId]);
+  res.json({ ok: true });
+});
+
 // Reset another user's password (admin only)
 apiAdminRouter.post('/users/:id/password', requireAdmin, async (req, res) => {
   const { new_password } = req.body || {};
