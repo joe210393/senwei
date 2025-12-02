@@ -1202,4 +1202,29 @@ apiAdminRouter.put('/events/registrations/:id', requireAuth, async (req, res) =>
   res.json({ ok: true });
 });
 
+// 更新關於選單（一次性執行）
+apiAdminRouter.post('/update-about-menu', requireAdmin, async (_req, res) => {
+  try {
+    // Update pages table
+    await query('UPDATE pages SET slug = ?, title = ? WHERE slug = ?', ['about-senwei', '關於我們', 'about-guchau']);
+    await query('UPDATE pages SET title = ? WHERE slug = ?', ['開發歷程', 'about-history']);
+    await query('INSERT OR IGNORE INTO pages (slug, title, content_html, is_published) VALUES (?, ?, ?, 1)', ['about-senwei', '關於我們', '<p>關於我們的內容...</p>']);
+    
+    // Update menus table
+    await query('UPDATE menus SET title = ?, slug = ?, url = ? WHERE title = ? OR slug = ?', ['關於我們', 'about-senwei', '/about-senwei.html', '關於鼓潮', 'about-guchau']);
+    await query('UPDATE menus SET title = ? WHERE title = ? OR (slug = ? AND title = ?)', ['開發歷程', '鼓潮音樂歷程', 'about-history', '鼓潮音樂歷程']);
+    
+    // Ensure menu exists if parent exists
+    const aboutParent = await query('SELECT id FROM menus WHERE title = ? AND parent_id IS NULL LIMIT 1', ['關於']);
+    if (aboutParent && aboutParent.length > 0) {
+      await query('INSERT OR IGNORE INTO menus (title, slug, url, order_index, parent_id, visible) VALUES (?, ?, ?, ?, ?, 1)', ['關於我們', 'about-senwei', '/about-senwei.html', 1, aboutParent[0].id]);
+    }
+    
+    res.json({ ok: true, message: '選單已更新' });
+  } catch (err) {
+    console.error('Error updating about menu:', err);
+    res.status(500).json({ error: String(err.message || err) });
+  }
+});
+
 
