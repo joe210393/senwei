@@ -179,9 +179,9 @@ try {
   // For new pages, use INSERT OR IGNORE to avoid overwriting existing content
   const insertPageNew = db.prepare('INSERT OR IGNORE INTO pages (slug, title, content_html, is_published) VALUES (?, ?, ?, 1)');
   
-  insertPageNew.run('about-guchau', '關於鼓潮', '<p>關於鼓潮的內容...</p>');
+  insertPageNew.run('about-senwei', '關於我們', '<p>關於我們的內容...</p>');
   insertPageNew.run('about-story', '品牌故事', '<p>品牌故事內容...</p>');
-  insertPageNew.run('about-history', '鼓潮音樂歷程', '<p>鼓潮音樂歷程內容...</p>');
+  insertPageNew.run('about-history', '開發歷程', '<p>開發歷程內容...</p>');
   
   // Ensure service pages exist (create if missing, but don't overwrite existing content)
   insertPageNew.run('service-courses', '音樂課程', '<p>音樂課程內容...</p>');
@@ -219,9 +219,9 @@ try {
   // 關於
   const aboutInfo = insertMenu.run('關於', null, '#', 10, null);
   const aboutId = aboutInfo.lastInsertRowid;
-  insertMenu.run('關於鼓潮', 'about-guchau', '/about-guchau.html', 1, aboutId);
+  insertMenu.run('關於我們', 'about-senwei', '/about-senwei.html', 1, aboutId);
   insertMenu.run('品牌故事', 'about-story', '/about-story.html', 2, aboutId);
-  insertMenu.run('鼓潮音樂歷程', 'about-history', '/about-history.html', 3, aboutId);
+  insertMenu.run('開發歷程', 'about-history', '/about-history.html', 3, aboutId);
   
   // 服務項目
   const servicesInfo = insertMenu.run('服務項目', null, '#', 20, null);
