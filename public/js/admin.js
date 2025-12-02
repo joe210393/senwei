@@ -410,9 +410,9 @@
   }
 
   async function initAboutEditors() {
-      await setupPageEditor('guchau', 'about-guchau', '關於鼓潮');
+      await setupPageEditor('guchau', 'about-guchau', '關於我們');
       await setupPageEditor('story', 'about-story', '品牌故事');
-      await setupPageEditor('history', 'about-history', '鼓潮音樂歷程');
+      await setupPageEditor('history', 'about-history', '開發歷程');
       
       // Common picker close
       document.getElementById('about-picker-close')?.addEventListener('click', (e)=>{e.preventDefault(); document.getElementById('about-picker').style.display='none';});

@@ -155,7 +155,7 @@
     const dict = {
       zh: {
         home: '首頁', about: '關於', 
-        about_guchau: '關於鼓潮', about_story: '品牌故事', about_history: '鼓潮音樂歷程', about_music: '關於音樂課程',
+        about_guchau: '關於我們', about_story: '品牌故事', about_history: '開發歷程', about_music: '關於音樂課程',
         services: '服務項目', service_courses: '音樂課程', service_commercial: '商業演出', service_sales: '樂器販售', service_space: '共享與藝術空間', service_tourism: '音樂觀光體驗',
         media_records: '影像紀錄',
         blog: '部落格', news: '相關報導', leaderboard: '師資說明', plans: '課程方案', contact: '聯絡我們', trial: '課程試讀', login: '登入'
